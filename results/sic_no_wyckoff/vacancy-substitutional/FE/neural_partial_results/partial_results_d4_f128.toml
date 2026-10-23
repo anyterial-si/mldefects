@@ -1,0 +1,4 @@
+train_data_percentage = 4
+fold = 128
+mae_train = 0.1568862284405699
+mae_test = 2.0815510393577354
