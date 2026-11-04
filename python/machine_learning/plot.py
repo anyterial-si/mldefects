@@ -12,6 +12,8 @@ import matplotlib.ticker as mticker
 # matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import toml
+
+from common import FIGURES_DIR, SUPPLEMENTARY_FIGURES_DIR, ensure_dir, target_folder
 from matplotlib.offsetbox import AnchoredText
 import matplotlib.colors as mcolors
 from matplotlib.lines import Line2D
@@ -35,6 +37,9 @@ plt.rcParams.update({
 })
 
 titles_bool = True
+
+ensure_dir(FIGURES_DIR)
+ensure_dir(SUPPLEMENTARY_FIGURES_DIR)
 
 materials = [
     "sic_no_wyckoff",
@@ -229,7 +234,7 @@ for material in materials:
 
             print(f"__________ {material} {defect_type} {target_variable} __________")
 
-            path_dir = f"../../results/{material}/{defect_type}/{target_variable}"
+            path_dir = target_folder(material, defect_type, target_variable)
             plot_data = toml.load(os.path.join(path_dir, "results.toml"))
 
 
@@ -237,9 +242,9 @@ for material in materials:
             for scaling in ["", "unscaled", "normal"]:
                 plt.figure(figsize=(8, 5), dpi=300)
                 if scaling:
-                    linear_optim_path_dir = f"../../results/{material}/{defect_type}/{target_variable}/optim_results_linear_{scaling}.toml"
+                    linear_optim_path_dir = path_dir / f"optim_results_linear_{scaling}.toml"
                 else:
-                    linear_optim_path_dir = f"../../results/{material}/{defect_type}/{target_variable}/optim_results_linear.toml"
+                    linear_optim_path_dir = path_dir / "optim_results_linear.toml"
                 linear_optim_data = toml.load(linear_optim_path_dir)
                 highlight_alpha = []
                 try:
@@ -266,14 +271,6 @@ for material in materials:
                     min_index = min_alpha_meas.index(min(min_alpha_meas))
                     x_min = linear_optim_data["scores"]["alphas"][min_index]
                     y_min = min_alpha_meas[min_index]
-
-                    # if scaling:
-                    #     linear_optim_path_dir = f"../../results/{material}/{defect_type}/{target_variable}/optim_results_linear_{scaling}.toml"
-                    # else:
-                    #     linear_optim_path_dir = f"../../results/{material}/{defect_type}/{target_variable}/optim_results_linear.toml"
-                    # linear_optim_data["best_params"]["alpha"] = x_min
-                    # with open(linear_optim_path_dir, "w") as f:
-                    #     toml.dump(linear_optim_data, f)
 
                     # Highlight the minimum point
                     plt.scatter(x_min, y_min, color="#DC143C", label=fr"Best \(\alpha\) = {optimal_alpha}", zorder=5, s=100)
@@ -309,9 +306,7 @@ for material in materials:
                     if scaling:
                         scaling = "_" + scaling
                     plt.tight_layout()
-                    save_path = f"{path_dir}/{material}_{defect_type}_{target_variable}_optim_linear{scaling}.pdf"
-                    plt.savefig(save_path, dpi=300, bbox_inches="tight")
-                    save_path = f"../../latex/rapport/figures_2/{material}_{defect_type}_{target_variable}_optim_linear{scaling}.pdf"
+                    save_path = SUPPLEMENTARY_FIGURES_DIR / f"{material}_{defect_type}_{target_variable}_optim_linear{scaling}.pdf"
                     plt.savefig(save_path, dpi=300, bbox_inches="tight")
 
                     plt.close('all')
@@ -325,7 +320,6 @@ for material in materials:
             cols = [f"10^{e}" for e in exponents]
 
             for kernel_specification in ["", "_unscaled", "_normal"]:
-            # for kernel_specification in ["", "_finer", "_unscaled", "_unscaled_finer", "_normal"]:
 
                 try:
                     gamma = gamma_dict[material][defect_type][target_variable][kernel_specification]
@@ -370,7 +364,7 @@ for material in materials:
                     {"color": "midnightblue", "marker": "3", "linestyle": "-."},
                     {"color": "orchid", "marker": "4", "linestyle": "-."},
                 ]
-                kernel_optim_path_dir = f"../../results/{material}/{defect_type}/{target_variable}/optim_results_kernel{kernel_specification}.toml"
+                kernel_optim_path_dir = path_dir / f"optim_results_kernel{kernel_specification}.toml"
                 kernel_optim_data = toml.load(kernel_optim_path_dir)
 
                 df = pd.DataFrame(columns=cols)
@@ -481,9 +475,6 @@ for material in materials:
                         kernel_optim_data["best_params"]["alpha"] = float(parse_number(df.columns[col_pos]))
                         kernel_optim_data["best_params"]["gamma"] = float(parse_number(df.index[row_pos]))
 
-                        kernel_optim_path_dir = f"../../results/{material}/{defect_type}/{target_variable}/optim_results_kernel{kernel_specification}.toml"
-                        with open(kernel_optim_path_dir, "w") as f:
-                            toml.dump(kernel_optim_data, f)
 
                         # print("df_score:", df.iloc[row_pos, col_pos], "best_score:", kernel_optim_data["scores"][str(kernel_optim_data['best_params']['gamma'])][kernel_optim_data["alphas"].index([kernel_optim_data['best_params']['alpha']][0])])
 
@@ -520,7 +511,7 @@ for material in materials:
                                         color='black')  # tick color
                     # plt.title("Heatmap")
                     # plt.show()
-                    plt.savefig(f"./../../latex/rapport/figures/{material}_{defect_type}_{target_variable}_optim_kernel{kernel_specification}.pdf", dpi=300, bbox_inches="tight")
+                    plt.savefig(SUPPLEMENTARY_FIGURES_DIR / f"{material}_{defect_type}_{target_variable}_optim_kernel{kernel_specification}_heatmap.pdf", dpi=300, bbox_inches="tight")
                     # plt.show()
                     plt.close("all")
 
@@ -545,14 +536,12 @@ for material in materials:
                     if titles_bool:
                         if kernel_specification == "_unscaled":
                             plt.title(f"{material_title_dict[material]} {defect_type} {target_variable} Kernel Unscaled")
-                        elif kernel_specification == "_unscaled_finer":
-                            plt.title(f"{material_title_dict[material]} {defect_type} {target_variable} Kernel Unscaled Finer")
                         elif kernel_specification == "_normal":
                             plt.title(f"{material_title_dict[material]} {defect_type} {target_variable} Kernel Normal")
                         else:
                             plt.title(f"{material_title_dict[material]} {defect_type} {target_variable} Kernel Standard")
 
-                    save_path = f"{path_dir}/{material}_{defect_type}_{target_variable}_optim_kernel{kernel_specification}.pdf"
+                    save_path = SUPPLEMENTARY_FIGURES_DIR / f"{material}_{defect_type}_{target_variable}_optim_kernel{kernel_specification}.pdf"
                     # plt.tight_layout()
                     plt.savefig(save_path, dpi=300, bbox_inches="tight")
 
@@ -841,7 +830,7 @@ for material in materials:
                 # plt.scatter(plot_data["nr_data_points"][-1], minimum_mae, color='#DC143C', zorder=5)
 
                 plt.tight_layout()
-                plt.savefig(f"{path_dir}/{material}_{defect_type}_{target_variable}_compare_report.pdf", dpi=300, bbox_inches="tight")
+                plt.savefig(SUPPLEMENTARY_FIGURES_DIR / f"{material}_{defect_type}_{target_variable}_compare_report.pdf", dpi=300, bbox_inches="tight")
                 plt.close('all')
                 print("success")
             except KeyError as error:
@@ -959,10 +948,7 @@ labelsize = 30
 lightning = 0.4
 
 for train_line in ["", "_train"]:
-    continue
     for cross_validation in [""]:
-    # for cross_validation in ["", "_10_fold"]:
-    # for cross_validation in [""]:
         n = 0
         for defect_type in defect_types:
             for target_variable in target_variables:
@@ -974,14 +960,14 @@ for train_line in ["", "_train"]:
                     d_max = 11
 
                 linear_descriptor = linear_targets[(defect_type,target_variable)]["descriptor"]
-                path_dir = f"../../results/{linear_descriptor}/{defect_type}/{target_variable}"
+                path_dir = target_folder(linear_descriptor, defect_type, target_variable)
                 linear_plot_data = toml.load(os.path.join(path_dir, f"results{cross_validation}.toml"))
                 linear_maes = linear_plot_data[f"MAE_percent_list_linear_test{cross_validation}"]
                 linear_maes_train = linear_plot_data[f"MAE_percent_list_linear_train{cross_validation}"]
                 linear_nr_data = linear_plot_data[f"nr_data_points{cross_validation}"]
 
                 kernel_descriptor = kernel_targets[(defect_type,target_variable)]["descriptor"]
-                path_dir = f"../../results/{kernel_descriptor}/{defect_type}/{target_variable}"
+                path_dir = target_folder(kernel_descriptor, defect_type, target_variable)
                 kernel_plot_data = toml.load(os.path.join(path_dir, f"results{cross_validation}.toml"))
                 kernel_nr_data = kernel_plot_data[f"nr_data_points{cross_validation}"]
                 kernel_maes = [0.0] * (d_max-1)
@@ -998,7 +984,7 @@ for train_line in ["", "_train"]:
                         pass
 
                 neural_descriptor = neural_targets[(defect_type,target_variable)]["descriptor"]
-                path_dir = f"../../results/{neural_descriptor}/{defect_type}/{target_variable}"
+                path_dir = target_folder(neural_descriptor, defect_type, target_variable)
                 neural_plot_data = toml.load(os.path.join(path_dir, f"results{cross_validation}.toml"))
                 neural_nr_data = neural_plot_data[f"nr_data_points{cross_validation}"]
                 neural_maes = [0.0] * (d_max-1)
@@ -1142,8 +1128,7 @@ for train_line in ["", "_train"]:
                     fig.tight_layout()
                     ax.yaxis.set_major_formatter(mticker.FormatStrFormatter('%.3f'))
 
-                    fig.savefig(f"../../results/mae_compare_article_{n}{cross_validation}{train_line}.pdf", dpi=300, bbox_inches="tight")
-                    fig.savefig(f"../../latex/rapport/figures/mae_compare_article_{n}{cross_validation}{train_line}.pdf", dpi=300, bbox_inches="tight")
+                    fig.savefig(FIGURES_DIR / f"mae_compare_article_{n}{cross_validation}{train_line}.pdf", dpi=300, bbox_inches="tight")
 
                     if n == 1 and train_line:
                         handles, labels = ax.get_legend_handles_labels()
@@ -1210,7 +1195,7 @@ for train_line in ["", "_train"]:
                             # bbox.height + pad,
                         )
 
-                        plt.savefig(f"../../latex/rapport/figures/mae_legend{train_line}.pdf", bbox_inches="tight", dpi=300,pad_inches=0)
+                        plt.savefig(FIGURES_DIR / f"mae_legend{train_line}.pdf", bbox_inches="tight", dpi=300,pad_inches=0)
 
                     if n == 1 and not train_line:
 
@@ -1276,7 +1261,7 @@ for train_line in ["", "_train"]:
                             # bbox.height + pad,
                         )
 
-                        fig_legend.savefig(f"../../latex/rapport/figures/mae_legend{train_line}.pdf", bbox_inches="tight", dpi=300,pad_inches=0)
+                        fig_legend.savefig(FIGURES_DIR / f"mae_legend{train_line}.pdf", bbox_inches="tight", dpi=300,pad_inches=0)
 
                         # if train_line:
                         #     plt.close('all')
@@ -1320,14 +1305,20 @@ plt.close("all")
 n = 0
 labelsize = 120
 for defect_type in defect_types:
-    continue
     for target_variable in target_variables:
         n = n + 1
         best = best_targets[(defect_type, target_variable)]
-        toml_path = f"../../results/{best["descriptor"]}/{defect_type}/{target_variable}/results.toml"
+        toml_path = target_folder(best["descriptor"], defect_type, target_variable) / "results.toml"
         toml_data = toml.load(toml_path)
-        toml_scatter_path = f"../../results/{best["descriptor"]}/{defect_type}/{target_variable}/results_scatter.toml"
+        toml_scatter_path = target_folder(best["descriptor"], defect_type, target_variable) / "results_scatter.toml"
         toml_scatter_data = toml.load(toml_scatter_path)
+        # Each model's predictions are stored with their own true values (scatter_{model}_true);
+        # files written by the original ml.py only have a shared "scatter_true".
+        scatter_pred = toml_scatter_data[f"scatter_{best['model']}_pred"]
+        scatter_true = toml_scatter_data.get(f"scatter_{best['model']}_true", toml_scatter_data.get("scatter_true"))
+        if scatter_true is None or len(scatter_true) != len(scatter_pred):
+            raise ValueError(f"{toml_scatter_path}: true and predicted values do not belong to the same fold")
+        toml_scatter_data["scatter_true"] = scatter_true
 
         try:
             fig, ax = plt.subplots(figsize=(24, 24))
@@ -1372,10 +1363,9 @@ for defect_type in defect_types:
                 # plt.legend(bbox_to_anchor=(0.5, 1), loc='lower center')
             # ax.set_box_aspect(1)
             # fig.tight_layout()
-            plt.subplots_adjust(right=.9, left=0.1, bottom=0.9)
+            plt.subplots_adjust(right=.9, left=0.1)
 
-            plt.savefig(f"../../results/scatter_{n}.pdf", dpi=300)
-            plt.savefig(f"../../latex/rapport/figures/scatter_{n}.pdf", dpi=300)
+            plt.savefig(FIGURES_DIR / f"scatter_{n}.pdf", dpi=300)
 
             if n == 1:
 
@@ -1422,7 +1412,7 @@ for defect_type in defect_types:
                     bbox.height + pad,
                 )
 
-                fig_legend.savefig(f"../../latex/rapport/figures/scatter_legend.pdf", bbox_inches="tight", dpi=300,pad_inches=0)
+                fig_legend.savefig(FIGURES_DIR / "scatter_legend.pdf", bbox_inches="tight", dpi=300,pad_inches=0)
 
             plt.close("all")
 

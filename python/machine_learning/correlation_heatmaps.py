@@ -1,8 +1,13 @@
+"""Paper Fig. 2: covariance (unscaled, standardized, normalized) and Pearson-coefficient heatmaps
+of the input parameters. Output: results/figures/*_heatmap_*.pdf.
+"""
 import os
-import glob
 # import seaborn as sns
 import matplotlib.pyplot as plt
 import pandas as pd
+
+from common import FIGURES_DIR, ensure_dir, load_datasets
+from input_parameters import FEATURES
 import sys
 import numpy as np
 from matplotlib.colors import ListedColormap, BoundaryNorm
@@ -21,9 +26,7 @@ defect_types = [
     "interstitial"
 ]
 
-python_folder = os.path.join(os.getcwd(), "..")
-database_folder = os.path.join(python_folder, "database")
-sys.path.append(database_folder)
+ensure_dir(FIGURES_DIR)
 
 threshold = 0.31  # the cutoff
 
@@ -69,26 +72,12 @@ norm = BoundaryNorm(bounds, custom_cmap.N)
 for stat_test in ["covariance_pearson_unscaled", "covariance_standard", "covariance_normal"]:
     for descriptor in descriptors:
 
-        if descriptor == "sic_no_wyckoff":
-            from input_parameters import atom_distance_charge_spin_input_parameters as features  # type: ignore
-        elif descriptor == "sic_wyckoff":
-            from input_parameters import sic_input_parameters as features  # type: ignore
-        elif descriptor == "sic_wyckoff_letter":
-            from input_parameters import sic_wyckoff_letter_input_parameters as features  # type: ignore
-        elif descriptor == "sic_wyckoff_nw_data":
-            from input_parameters import sic_input_parameters as features  # type: ignore
-        elif descriptor == "sic_wyckoff_letter_nw_data":
-            from input_parameters import sic_wyckoff_letter_input_parameters as features  # type: ignore
-        material_folder = os.path.join(python_folder, "..", f"results/{descriptor}")
+        features = FEATURES[descriptor]
 
         for defect_type in defect_types:
 
 
-            defect_folder = os.path.join(material_folder, defect_type)
-            csv_files = glob.glob(os.path.join(defect_folder, "*.csv"))
-            double_index = next(i for i, s in enumerate(csv_files) if s.endswith("double.csv"))
-            data = pd.read_csv(csv_files[double_index])
-            data_single = pd.read_csv(csv_files[double_index - 1])
+            data, data_single = load_datasets(descriptor, defect_type)
             data = data[features]
             data_single = data_single[features]
             all_data = pd.concat([data, data_single], ignore_index=True)
@@ -99,10 +88,10 @@ for stat_test in ["covariance_pearson_unscaled", "covariance_standard", "covaria
                 df = df.loc[:, df.nunique() > 1]
 
                 corr = df.cov(ddof=1)
-                pdf_name = f"../../latex/rapport/figures/{descriptor}_{defect_type}_heatmap_covariance_unscaled.pdf"
+                pdf_name = f"{FIGURES_DIR}/{descriptor}_{defect_type}_heatmap_covariance_unscaled.pdf"
 
                 corr_pearson = df.corr("pearson")
-                pdf_name_pearson = f"../../latex/rapport/figures/{descriptor}_{defect_type}_heatmap_pearson_coefficient.pdf"
+                pdf_name_pearson = f"{FIGURES_DIR}/{descriptor}_{defect_type}_heatmap_pearson_coefficient.pdf"
 
             elif stat_test == "covariance_standard":
                 scaler = StandardScaler()
@@ -114,7 +103,7 @@ for stat_test in ["covariance_pearson_unscaled", "covariance_standard", "covaria
                 df = df.dropna()
                 df = df.loc[:, df.nunique() > 1]
                 corr = df.cov(ddof=1)
-                pdf_name = f"../../latex/rapport/figures/{descriptor}_{defect_type}_heatmap_covariance_standardized.pdf"
+                pdf_name = f"{FIGURES_DIR}/{descriptor}_{defect_type}_heatmap_covariance_standardized.pdf"
 
             elif stat_test == "covariance_normal":
                 scaler = MinMaxScaler()
@@ -126,7 +115,7 @@ for stat_test in ["covariance_pearson_unscaled", "covariance_standard", "covaria
                 df = df.dropna()
                 df = df.loc[:, df.nunique() > 1]
                 corr = df.cov(ddof=1)
-                pdf_name = f"../../latex/rapport/figures/{descriptor}_{defect_type}_heatmap_covariance_normalized.pdf"
+                pdf_name = f"{FIGURES_DIR}/{descriptor}_{defect_type}_heatmap_covariance_normalized.pdf"
 
             plt.imshow(corr, cmap=custom_cmap, norm=norm)
             # plt.pcolormesh(corr, cmap=custom_cmap, norm=norm, linewidths=0, edgecolors='face')

@@ -1,5 +1,9 @@
-import os
-import sys
+"""MLP optimization job: test MAE of one MLPRegressor configuration on one CV fold.
+
+Required: --neural_params (JSON), --fold (1-10), --scaling; --neural_target '_clean' marks
+re-evaluation runs. Writes one TOML to results/jobs/neural/; aggregate_results.py collects
+them into optim_results_neural{target}.db.
+"""
 import toml
 from itertools import combinations
 
@@ -9,7 +13,7 @@ from sklearn.neural_network import MLPRegressor
 from sklearn.metrics import mean_absolute_error
 from sklearn.model_selection import KFold
 
-sys.path.append(os.getcwd())
+from common import JOBS_DIR, ensure_dir
 from init_ml import (
     data,
     data_single,
@@ -29,6 +33,9 @@ if scaling == "standard":
 elif scaling == "normal":
     from sklearn.preprocessing import MinMaxScaler
 
+
+if neural_params is None or fold is None:
+    raise SystemExit("optim_neural.py requires --neural_params and --fold")
 
 n_splits = 10
 kf = KFold(n_splits=n_splits, shuffle=True, random_state=42)
@@ -96,14 +103,16 @@ mae_fold = mean_absolute_error(test_y, y_pred_test)
 
 toml_data = neural_params
 toml_data["hidden_layer_sizes"] = str(neural_params["hidden_layer_sizes"])
-toml_data["mae_fold"] = mae_fold
+toml_data["mae_fold"] = float(mae_fold)
 toml_data["neural_target"] = neural_target
 
 toml_data["material"] = material
 toml_data["defect_type"] = defect_type
 toml_data["target_variable"] = target_variable
+toml_data["scaling"] = scaling
+toml_data["fold"] = fold
 
-toml_path = f"../sbatch/neural_toml_results/{material}_{defect_type}_{target_variable}_{toml_data['hidden_layer_sizes']}_{toml_data['activation']}_{toml_data['solver']}_{toml_data['alpha']}_fold{fold}.toml"
+toml_path = ensure_dir(JOBS_DIR / "neural") / f"{material}_{defect_type}_{target_variable}_{toml_data['hidden_layer_sizes']}_{toml_data['activation']}_{toml_data['solver']}_{toml_data['alpha']}_{scaling}{neural_target}_fold{fold}.toml"
 with open(toml_path, "w", encoding="utf-8") as file:
     toml.dump(toml_data, file)
 

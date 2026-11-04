@@ -1,3 +1,8 @@
+"""Paper Table 3 (all MAEs and optimal hyperparameters) and Table 4 (projection scores) as LaTeX.
+
+Reads results/<case>/optim_results_{linear,kernel}*.toml, optim_results_neural_clean.db and
+results.toml; writes results/tables/all_results_table.tex and results/tables/projections.tex.
+"""
 import sqlite3
 import toml
 import os
@@ -22,9 +27,7 @@ target_variables = [
     "ZPL"
 ]
 
-python_folder = os.path.join(os.getcwd(), "..")
-database_folder = os.path.join(python_folder, "database")
-sys.path.append(database_folder)
+from common import TABLES_DIR, ensure_dir, target_folder
 
 def to_latex(x):
 
@@ -150,7 +153,7 @@ for defect_type in defect_types:
             for target_variable in target_variables:
 
 
-                results_folder = os.path.join(python_folder, "..", f"results/{descriptor}/{defect_type}/{target_variable}/optim_results_linear{scaling}.toml")
+                results_folder = target_folder(descriptor, defect_type, target_variable) / f"optim_results_linear{scaling}.toml"
                 results = toml.load(results_folder)
                 all_scores_dict[defect_type]["ridge"][target_variable].append(float(min(results["scores"]["mae"])))
                 optim_params_ridge_dict[defect_type]["ridge"][target_variable].append(to_latex(results["best_params"]["alpha"]))
@@ -159,7 +162,7 @@ for defect_type in defect_types:
             for target_variable in target_variables:
 
                 try:
-                    results_folder = os.path.join(python_folder, "..", f"results/{descriptor}/{defect_type}/{target_variable}/optim_results_kernel{scaling}.toml")
+                    results_folder = target_folder(descriptor, defect_type, target_variable) / f"optim_results_kernel{scaling}.toml"
                     results = toml.load(results_folder)
                     all_scores_dict[defect_type]["kernel_ridge"][target_variable].append(float(min(results["scores"][str(results["best_params"]["gamma"])])))
                     optim_params_ridge[n].append(to_latex(results["best_params"]["alpha"]))
@@ -175,8 +178,8 @@ for defect_type in defect_types:
 
             for target_variable in target_variables:
                 if not scaling:
-                    # db_optim_path = os.path.join("./../../results", descriptor, defect_type, target_variable, f"optim_results_neural.db")
-                    db_optim_path = os.path.join("./../../results", descriptor, defect_type, target_variable, f"optim_results_neural_clean.db")
+                    # Table 3 uses the "clean" re-evaluation database of the selected MLP configurations
+                    db_optim_path = target_folder(descriptor, defect_type, target_variable) / "optim_results_neural_clean.db"
 
                     conn = sqlite3.connect(db_optim_path, timeout=3600)
                     conn.execute("PRAGMA locking_mode = EXCLUSIVE")
@@ -352,7 +355,7 @@ for defect_type in defect_types:
     for target_variable in target_variables:
         for model in ["linear", "kernel", "neural"]:
             best = best_targets[(defect_type, target_variable)][model]
-            toml_path = os.path.join(python_folder, "..", f"results/{best["descriptor"]}/{defect_type}/{target_variable}/results.toml")
+            toml_path = target_folder(best["descriptor"], defect_type, target_variable) / "results.toml"
             toml_data = toml.load(toml_path)
 
             try:
@@ -388,7 +391,7 @@ projection_table = f"""
 \\end{{table}}
 """
 
-with open("./../../latex/rapport/projections.tex", "w", encoding="utf-8") as file:
+with open(ensure_dir(TABLES_DIR) / "projections.tex", "w", encoding="utf-8") as file:
     file.write(projection_table)
 
 # best_targets = {
@@ -403,7 +406,7 @@ with open("./../../latex/rapport/projections.tex", "w", encoding="utf-8") as fil
 # for defect_type in defect_types:
 #     for target_variable in target_variables:
 #         best = best_targets[(defect_type, target_variable)]
-#         toml_path = os.path.join(python_folder, "..", f"results/{best["descriptor"]}/{defect_type}/{target_variable}/results.toml")
+#         toml_path = target_folder(best["descriptor"], defect_type, target_variable) / "results.toml"
 #         toml_data = toml.load(toml_path)
 
 #         try:
@@ -778,5 +781,5 @@ cccccc}}
 
 """
 
-with open("./../../latex/rapport/all_results_table.tex", "w", encoding="utf-8") as file:
+with open(ensure_dir(TABLES_DIR) / "all_results_table.tex", "w", encoding="utf-8") as file:
     file.write(all_table)

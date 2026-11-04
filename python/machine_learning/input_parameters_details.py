@@ -1,8 +1,13 @@
+"""Paper Fig. 1: minimum, maximum, mean and standard deviation of every input parameter.
+Output: results/figures/*_input_parameter_details_*.pdf.
+"""
 import os
-import glob
 import seaborn as sns
 import matplotlib.pyplot as plt
 import pandas as pd
+
+from common import FIGURES_DIR, ensure_dir, load_datasets
+from input_parameters import FEATURES
 import sys
 from matplotlib.ticker import MaxNLocator
 import numpy as np
@@ -29,9 +34,7 @@ plt.rcParams.update({
     "font.size": 14,
 })
 
-python_folder = os.path.join(os.getcwd(), "..")
-database_folder = os.path.join(python_folder, "database")
-sys.path.append(database_folder)
+ensure_dir(FIGURES_DIR)
 
 fontsize=60
 width = 8
@@ -45,25 +48,11 @@ colors = plt.rcParams['axes.prop_cycle'].by_key()['color']
 for scaling in scalings:
     for descriptor in descriptors:
 
-        if descriptor == "sic_no_wyckoff":
-            from input_parameters import atom_distance_charge_spin_input_parameters as features  # type: ignore
-        elif descriptor == "sic_wyckoff":
-            from input_parameters import sic_input_parameters as features  # type: ignore
-        elif descriptor == "sic_wyckoff_letter":
-            from input_parameters import sic_wyckoff_letter_input_parameters as features  # type: ignore
-        elif descriptor == "sic_wyckoff_nw_data":
-            from input_parameters import sic_input_parameters as features  # type: ignore
-        elif descriptor == "sic_wyckoff_letter_nw_data":
-            from input_parameters import sic_wyckoff_letter_input_parameters as features  # type: ignore
-        material_folder = os.path.join(python_folder, "..", f"results/{descriptor}")
+        features = FEATURES[descriptor]
 
         for defect_type in defect_types:
 
-            defect_folder = os.path.join(material_folder, defect_type)
-            csv_files = glob.glob(os.path.join(defect_folder, "*.csv"))
-            double_index = next(i for i, s in enumerate(csv_files) if s.endswith("double.csv"))
-            data = pd.read_csv(csv_files[double_index])
-            data_single = pd.read_csv(csv_files[double_index - 1])
+            data, data_single = load_datasets(descriptor, defect_type)
             data = data[features]
             data_single = data_single[features]
 
@@ -78,7 +67,7 @@ for scaling in scalings:
                     "min": df.min(),
                     "std": df.std(ddof=1)
                 })
-                pdf_name = f"../../latex/rapport/figures/{descriptor}_{defect_type}_input_parameter_details_unscaled_double.pdf"
+                pdf_name = f"{FIGURES_DIR}/{descriptor}_{defect_type}_input_parameter_details_unscaled_double.pdf"
 
                 df = data_single
                 df = df.dropna()
@@ -90,7 +79,7 @@ for scaling in scalings:
                     "min": df.min(),
                     "std": df.std(ddof=1)
                 })
-                pdf_name_single = f"../../latex/rapport/figures/{descriptor}_{defect_type}_input_parameter_details_unscaled_single.pdf"
+                pdf_name_single = f"{FIGURES_DIR}/{descriptor}_{defect_type}_input_parameter_details_unscaled_single.pdf"
 
             x_pos = np.arange(len(summary))
             plt.bar(
@@ -221,6 +210,6 @@ for scaling in scalings:
 
 
 
-                fig_legend.savefig(f"../../latex/rapport/figures/input_parameter_details_legend.pdf", bbox_inches="tight", dpi=300,pad_inches=0)
+                fig_legend.savefig(f"{FIGURES_DIR}/input_parameter_details_legend.pdf", bbox_inches="tight", dpi=300,pad_inches=0)
 
             plt.close()

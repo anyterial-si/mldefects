@@ -1,5 +1,7 @@
-import os
-import sys
+"""Ridge optimization: 10-fold CV test MAE for 100 alphas (10^-8 ... 10^16.75, or --alphas_argparse).
+
+Writes results/<descriptor>/<defect_type>/<target>/optim_results_linear{,_unscaled,_normal}.toml.
+"""
 from itertools import combinations
 
 import numpy as np
@@ -9,8 +11,8 @@ from sklearn.linear_model import Ridge
 from sklearn.metrics import mean_absolute_error
 from sklearn.model_selection import KFold
 
-sys.path.append(os.getcwd())
 from init_ml import (
+    alphas_argparse,
     data,
     data_single,
     features,
@@ -30,7 +32,8 @@ else:
 
 
 alpha_maes = []
-alphas = [10**e for e in np.arange(-8, 17, 0.25)]
+# default grid: 100 values 10^-8 ... 10^16.75; --alphas_argparse "[a1, a2]" evaluates only the given alphas
+alphas = alphas_argparse if alphas_argparse else [10**e for e in np.arange(-8, 17, 0.25)]
 
 for alpha in alphas:
     n_splits = 10
@@ -116,6 +119,6 @@ toml_data = {
     },
 }
 
-toml_optim_path = os.path.join(target_folder, f"optim_results_linear{linear_optim_target}.toml")
+toml_optim_path = target_folder / f"optim_results_linear{linear_optim_target}.toml"
 with open(toml_optim_path, "w", encoding="utf-8") as file:
     toml.dump(toml_data, file)

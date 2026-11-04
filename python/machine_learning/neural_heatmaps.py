@@ -1,3 +1,6 @@
+"""Supplementary heatmaps of the MLP optimization (MAE vs. alpha and vs. number of layers/neurons),
+read from results/<case>/optim_results_neural.db. Output: results/figures/supplementary/.
+"""
 import ast
 import os
 import sqlite3
@@ -6,6 +9,8 @@ import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
 from matplotlib.colors import PowerNorm
+
+from common import SUPPLEMENTARY_FIGURES_DIR, ensure_dir, target_folder
 
 plt.rcParams.update({
     "text.usetex": True,
@@ -375,13 +380,7 @@ for descriptor in descriptors:
                 f"Target Variable: {target_variable}"
             )
 
-            db_optim_path = os.path.join(
-                "./../../results",
-                descriptor,
-                defect_type,
-                target_variable,
-                "optim_results_neural.db",
-            )
+            db_optim_path = target_folder(descriptor, defect_type, target_variable) / "optim_results_neural.db"
 
 
             conn = sqlite3.connect(db_optim_path, timeout=3600)
@@ -590,7 +589,7 @@ for descriptor in descriptors:
                                     color='black')  # tick color
                     # plt.title("Heatmap")
                     # plt.show()
-                    plt.savefig(f"../../latex/rapport/figures/{descriptor}_{defect_type}_{target_variable}_neural_heatmap_alpha.pdf", dpi=300, bbox_inches="tight")
+                    plt.savefig(ensure_dir(SUPPLEMENTARY_FIGURES_DIR) / f"{descriptor}_{defect_type}_{target_variable}_neural_heatmap_alpha.pdf", dpi=300, bbox_inches="tight")
                     plt.close("all")
             # plasma
             # Blues
@@ -627,7 +626,7 @@ for descriptor in descriptors:
                                 color='black')  # tick color
             # plt.title("Heatmap")
             # plt.show()
-            plt.savefig(f"../../latex/rapport/figures/{descriptor}_{defect_type}_{target_variable}_neural_heatmap_layer.pdf", dpi=300, bbox_inches="tight")
+            plt.savefig(ensure_dir(SUPPLEMENTARY_FIGURES_DIR) / f"{descriptor}_{defect_type}_{target_variable}_neural_heatmap_layer.pdf", dpi=300, bbox_inches="tight")
             plt.close("all")
 
             conn.close()

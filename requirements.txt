@@ -1,0 +1,14 @@
+# Python 3.12 (plot.py needs >= 3.12). Install with:  python3.12 -m venv .venv && .venv/bin/pip install -r requirements.txt
+# scikit-learn 1.6.1 is the version recorded in python/machine_learning/saved_models/*.joblib.
+# The other pins are contemporary releases with which every script in this repository was verified (2026-11).
+# The figures additionally need a LaTeX installation with the newtx fonts (matplotlib text.usetex=True).
+# Note: MLP (MLPRegressor) results depend on the numerical environment (scipy L-BFGS-B, BLAS, thread count);
+# see README, "Reproducibility of the MLP results".
+scikit-learn==1.6.1
+numpy==2.2.6
+scipy==1.15.3
+pandas==2.2.3
+matplotlib==3.10.3
+seaborn==0.13.2
+toml==0.10.2
+joblib==1.4.2

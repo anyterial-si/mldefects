@@ -1,13 +1,21 @@
+"""Train the best models on all data and save them to saved_models/ (not used for the paper's results).
+
+Note: the saved WL interstitial models do not match the paper (see README).
+"""
+from pathlib import Path
+
 from joblib import dump
 
 import numpy as np
 import toml
 
 import argparse
-import glob
 import os
 import sys
 import pandas as pd
+
+from common import ensure_dir, load_datasets, target_folder as _target_folder
+from input_parameters import FEATURES
 
 parser = argparse.ArgumentParser()
 
@@ -182,29 +190,10 @@ if model_type == "neural":
 
     mlp_params = neural_hyperparameters[target_variable][defect_type][descriptor]
 
-python_folder = os.path.join(os.getcwd(), "..")
-database_folder = os.path.join(python_folder, "database")
-material_folder = os.path.join(python_folder, "..", f"results/{descriptor}")
-defect_folder = os.path.join(material_folder, defect_type)
-target_folder = os.path.join(defect_folder, target_variable)
-
-sys.path.append(database_folder)
-if descriptor == "sic_wyckoff":
-    from input_parameters import sic_input_parameters as features  # type: ignore
-elif descriptor == "sic_wyckoff_nw_data":
-    from input_parameters import sic_input_parameters as features  # type: ignore
-elif descriptor == "sic_wyckoff_letter":
-    from input_parameters import sic_wyckoff_letter_input_parameters as features  # type: ignore
-elif descriptor == "sic_wyckoff_letter_nw_data":
-    from input_parameters import sic_wyckoff_letter_input_parameters as features  # type: ignore
-elif descriptor == "sic_no_wyckoff":
-    from input_parameters import atom_distance_charge_spin_input_parameters as features  # type: ignore
-
-csv_files = glob.glob(os.path.join(defect_folder, "*.csv"))
-double_index = next(i for i, s in enumerate(csv_files) if s.endswith("double.csv"))
-cols = features + [target_variable]
-data = pd.read_csv(csv_files[double_index], usecols=cols)
-data_single = pd.read_csv(csv_files[double_index - 1], usecols=cols)
+target_folder = _target_folder(descriptor, defect_type, target_variable)
+features = FEATURES[descriptor]
+data, data_single = load_datasets(descriptor, defect_type, columns=features + [target_variable])
+saved_models_dir = ensure_dir(Path(__file__).resolve().parent / "saved_models")
 
 if model_type == "kernel":
     from sklearn.kernel_ridge import KernelRidge
@@ -221,7 +210,7 @@ elif scaling == "normal":
 
 if model_type == "kernel":
     try:
-        toml_data_params = toml.load(os.path.join(target_folder, "optim_results_kernel_unscaled.toml"))
+        toml_data_params = toml.load(target_folder / "optim_results_kernel_unscaled.toml")
         best_params = toml_data_params["best_params"]
         best_params["kernel"] = "rbf"
         model = KernelRidge(**best_params)
@@ -270,7 +259,7 @@ else:
     model.fit(train_X_scaled, train_y_scaled.squeeze())
 
 if not scaling == "unscaled":
-    dump(scaler_X, f"./saved_models/{descriptor}_{defect_type}_{target_variable}_scaler_X.joblib")
-    dump(scaler_y, f"./saved_models/{descriptor}_{defect_type}_{target_variable}_scaler_y.joblib")
+    dump(scaler_X, saved_models_dir / f"{descriptor}_{defect_type}_{target_variable}_scaler_X.joblib")
+    dump(scaler_y, saved_models_dir / f"{descriptor}_{defect_type}_{target_variable}_scaler_y.joblib")
 
-dump(model, f"./saved_models/{descriptor}_{defect_type}_{target_variable}_model.joblib")
+dump(model, saved_models_dir / f"{descriptor}_{defect_type}_{target_variable}_model.joblib")

@@ -1,5 +1,10 @@
-import os
-import sys
+"""Kernel ridge optimization job: 10-fold CV test MAE for one (gamma, alpha) pair.
+
+Required: --gamma, --kernel_optim_alpha_index (0-10 into alpha = 10^-8 ... 10^2),
+--scaling and the matching --kernel_optim_target ('', '_unscaled', '_normal').
+Writes one TOML to results/jobs/kernel/; aggregate_results.py collects them into
+optim_results_kernel{target}.toml.
+"""
 from itertools import combinations
 
 import numpy as np
@@ -9,7 +14,7 @@ from sklearn.kernel_ridge import KernelRidge
 from sklearn.metrics import mean_absolute_error
 from sklearn.model_selection import KFold
 
-sys.path.append(os.getcwd())
+from common import JOBS_DIR, ensure_dir
 from init_ml import (
     data,
     data_single,
@@ -31,6 +36,9 @@ if scaling == "standard":
 elif scaling == "normal":
     from sklearn.preprocessing import MinMaxScaler
 
+
+if gamma is None or kernel_optim_alpha_index is None:
+    raise SystemExit("optim_kernel.py requires --gamma and --kernel_optim_alpha_index")
 
 alpha_mae = []
 if alphas_argparse:
@@ -115,13 +123,15 @@ toml_optim_data["kernel_optim_target"] = kernel_optim_target
 toml_optim_data["alpha_mae"] = float(alpha_mae[0])
 toml_optim_data["gamma"] = gamma
 toml_optim_data["kernel_optim_alpha_index"] = kernel_optim_alpha_index
-toml_optim_data["alphas"] = alphas
-toml_optim_data["alphas_part"] = alphas_part
+toml_optim_data["alphas"] = [float(a) for a in alphas]  # plain floats: numpy 2 scalars would be written as strings
+toml_optim_data["alphas_part"] = [float(a) for a in alphas_part]
 
 toml_optim_data["material"] = material
 toml_optim_data["defect_type"] = defect_type
 toml_optim_data["target_variable"] = target_variable
 
-toml_path = f"../sbatch/kernel_toml_results/{material}_{defect_type}_{target_variable}_gamma{gamma}_alpha{alphas_part[0]}_{scaling}.toml"
+toml_optim_data["scaling"] = scaling
+
+toml_path = ensure_dir(JOBS_DIR / "kernel") / f"{material}_{defect_type}_{target_variable}_gamma{gamma}_alpha{float(alphas_part[0])}_{scaling}.toml"
 with open(toml_path, "w", encoding="utf-8") as file:
     toml.dump(toml_optim_data, file)
