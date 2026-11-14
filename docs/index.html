@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Prescreening Point Defects in Semiconductors With Machine Learning</title>
+<meta name="description" content="Code, data and trained models for: P. Karlsson, J. Davidsson, R. Armiento, Prescreening Point Defects in Semiconductors With Machine Learning (2026).">
+<link rel="canonical" href="https://si.anyterial.se/mldefects/">
+<style>
+  :root { --fg: #1d1d1f; --muted: #5a5a60; --bg: #ffffff; --link: #0b5cad; --rule: #dcdce0; }
+  @media (prefers-color-scheme: dark) {
+    :root { --fg: #e8e8ea; --muted: #a4a4ab; --bg: #16161a; --link: #7fb6ff; --rule: #34343a; }
+  }
+  body { margin: 0; background: var(--bg); color: var(--fg);
+         font: 17px/1.6 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  main { max-width: 46rem; margin: 0 auto; padding: 3rem 1rem 4rem; }
+  h1 { font-size: 1.8rem; line-height: 1.25; margin: 0 0 1rem; }
+  h2 { font-size: 1.1rem; margin: 2rem 0 0.5rem; }
+  a { color: var(--link); }
+  .authors { margin: 0; }
+  .affil { margin: 0.2rem 0 0; color: var(--muted); font-size: 0.95rem; }
+  .links { display: flex; flex-wrap: wrap; gap: 0.5rem 1.5rem; margin: 1.5rem 0 0; padding: 1rem 0;
+           border-top: 1px solid var(--rule); border-bottom: 1px solid var(--rule); }
+  .links a { font-weight: 600; text-decoration: none; }
+  .links a:hover { text-decoration: underline; }
+  p.abstract { text-align: justify; hyphens: auto; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Prescreening Point Defects in Semiconductors With Machine Learning</h1>
+  <p class="authors">Paul Karlsson, Joel Davidsson, and Rickard Armiento</p>
+  <p class="affil">Department of Physics, Chemistry and Biology, Linköping University, Linköping, Sweden</p>
+
+  <nav class="links">
+    <a href="https://github.com/anyterial-si/mldefects">Code, data and trained models (GitHub)</a>
+    <a href="https://arxiv.org/abs/2609.14846">Paper (arXiv:2609.14846)</a>
+    <a href="https://defects.anyterial.se">ADAQ database</a>
+  </nav>
+
+  <h2>Abstract</h2>
+  <p class="abstract">High-throughput calculations using density-functional theory (DFT) are commonly used to explore point defects for applications in power electronics and quantum technologies. There is currently a major shift away from these traditional simulation techniques towards machine learning (ML) methods. We explore a class of physics-guided ML models for predicting defect formation energies and zero-phonon lines (ZPL) to identify point defects for quantum applications. The models are specifically targeted for use in a prescreening step for accelerated high-throughput workflows, and are therefore designed to avoid the costly relaxation step typically present with ML interatomic potentials (MLIPs). We compare performance for single and double point defect systems in 4H-SiC with ridge, kernel ridge, and multilayer perceptron (MLP) models using three different descriptors representing the defect systems. For vacancies and substitutions, the optimized models give mean absolute errors (MAEs) of 0.478&nbsp;eV for the formation energy and 0.202&nbsp;eV for ZPLs, which is just above the level at which such predictions can be useful even beyond the targeted prescreening, i.e., in some applications they may completely replace the need for costly DFT calculations. For interstitials the MAEs are larger, 1.123&nbsp;eV for the formation energy and 0.230&nbsp;eV for the ZPL, which, while still useful for prescreening, will not generally be useful for more detailed characterization. Hence, while the results may be further improved by model design and optimization, the models presented in this work are already useful for prescreening in high-throughput characterization of point defects.</p>
+
+  <h2>Code and data</h2>
+  <p>The repository <a href="https://github.com/anyterial-si/mldefects">github.com/anyterial-si/mldefects</a> contains the input datasets, all scripts, the output values behind the paper's tables and figures, and the trained weights of the four best models quoted above. Its README describes how to reproduce each table and figure.</p>
+</main>
+</body>
+</html>
