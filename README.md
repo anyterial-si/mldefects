@@ -9,7 +9,8 @@ zero-phonon lines (ZPL) of single and double point defects in 4H-SiC. The data c
 ADAQ high-throughput database.
 
 This repository contains everything needed to rerun the calculations, plus the output values
-that the paper's tables and figures were made from. The fitted model weights of every Table 3
+that the paper's tables and figures were made from, and the fitted weights of the four
+best models quoted in the abstract (see "The best models"). The fitted weights of every Table 3
 model and of every MLP learning-curve fit, and the raw per-job outputs, are in the companion
 repository **mldefects_results** (`<URL of mldefects_results>`); see "Saved model weights".
 
@@ -107,13 +108,13 @@ from the shipped results (about 30 min, mostly `plot.py` and `neural_heatmaps.py
 |---|---|---|
 | `optim_results_linear{,_unscaled,_normal}.toml` | ridge: MAE for each alpha, `best_params` | `optim_linear.py` |
 | `optim_results_kernel{,_unscaled,_normal}.toml` | kernel ridge: MAE for each (gamma, alpha), `best_params` | `optim_kernel.py` + `aggregate_results.py kernel` |
-| `optim_results_neural.db` | MLP optimization: per-fold MAE of every configuration tried (SQLite) | `optim_neural.py` + `aggregate_results.py neural` |
+| `optim_results_neural.db` | MLP optimization: per-fold MAE of every configuration tried (SQLite); `neural_search_jobs.py` lists them as jobs | `optim_neural.py` + `aggregate_results.py neural` |
 | `optim_results_neural_clean.db` | 10-fold evaluation of the candidate MLP configurations in the original search; selects the Table 3 configuration | same, with `--neural_target _clean` |
 | `cv_scores.toml` | per-fold train and test MAEs of every Table 3 model, computed from its saved weights; the Table 3 MLP MAEs | `cv_models.py train` + `evaluate` |
 | `results.toml` | learning curves (`MAE_percent_list_*`), averages from `data_average.py` | `ml.py`, `aggregate_results.py curves`, `data_average.py` |
 | `results_scatter.toml` | test-set predictions for the scatter plots | `ml.py` |
 | `{kernel,neural}_partial_results/` (mldefects_results only) | one learning-curve point per file | `ml.py` |
-| `weights/{ridge,kernel,neural}{,_unscaled,_normal}_fold{1-10}.npz` (mldefects_results only) | fitted weights of each Table 3 model for each CV fold | `cv_models.py train` |
+| `weights/{ridge,kernel,neural}{,_unscaled,_normal}_fold{1-10}.npz` (here only for the four best models, see "The best models"; all in mldefects_results) | fitted weights of each Table 3 model for each CV fold | `cv_models.py train` |
 | `weights/curves/neural_d{1-9}_f{n}.npz` (mldefects_results only) | fitted weights of each MLP learning-curve fit (Fig. 3) | `ml.py --save_weights` |
 | `weights/neural_alternative_fold{1-10}.npz` (mldefects_results only) | the alternative MLP configurations compared in Supplementary Material section I | `cv_models.py train --name neural_alternative` |
 
@@ -160,6 +161,12 @@ scripts are needed.
          "max_iter": 9999999999999, "tol": 0.0001, "max_fun": 9999999999999, "random_state": 42}'
    python aggregate_results.py neural        # -> optim_results_neural{,_clean}.db
    ```
+   To re-run the published search, `neural_search_jobs.py` lists one such command for every
+   configuration and fold recorded in the published databases (about 19 000 jobs per case for
+   the search, 12 000 for the 10-fold candidate evaluation):
+   ```
+   python neural_search_jobs.py --material sic_no_wyckoff --defect_type vacancy-substitutional --target_variable FE [--neural_target _clean] > jobs.txt
+   ```
    An L-BFGS fit of a selected configuration takes 15–25 CPU-min per fold for VS and many hours
    for interstitials.
 4. **Learning curves and scatter data (Fig. 3, 4)**, using the best configuration of each model
@@ -200,6 +207,34 @@ scripts are needed.
 To write results somewhere other than `results/`, set `MLDEFECTS_RESULTS_DIR` (the smoke test
 does this).
 
+## The best models
+
+`results/` includes the fitted weights (all 10 cross-validation folds, 4.8 MB in total) of the
+four best models of Table 3, quoted in the abstract:
+
+| Task | Model | Descriptor | Weights | MAE (eV) |
+|---|---|---|---|---|
+| VS FE | MLP, standardized | Atomic | `results/sic_no_wyckoff/vacancy-substitutional/FE/weights/neural_fold{1-10}.npz` | 0.478 |
+| VS ZPL | kernel ridge, unscaled | Atomic | `results/sic_no_wyckoff/vacancy-substitutional/ZPL/weights/kernel_unscaled_fold{1-10}.npz` | 0.202 |
+| I FE | MLP, standardized | Wyckoff Coordinate | `results/sic_wyckoff/interstitial/FE/weights/neural_fold{1-10}.npz` | 1.123 |
+| I ZPL | kernel ridge, unscaled | Atomic | `results/sic_no_wyckoff/interstitial/ZPL/weights/kernel_unscaled_fold{1-10}.npz` | 0.230 |
+
+Each fold's model was trained on the other nine folds plus all single defects. To predict, from
+`python/machine_learning/`:
+
+```python
+import numpy as np
+from cv_models import load_model
+from input_parameters import FEATURES
+
+models = [load_model("sic_wyckoff", "interstitial", "FE", "neural", "standard", fold) for fold in range(1, 11)]
+X = ...   # rows of input parameters, columns FEATURES["sic_wyckoff"], as in data/*_cleaned.csv
+prediction = np.mean([model(X) for model in models], axis=0)   # eV; or use a single fold
+```
+
+For the kernel ridge models, `load_model` rebuilds the training inputs from `data/`. With these
+files, `python plot.py --from-weights` also recomputes the Fig. 4 predictions from the weights.
+
 ## Saved model weights
 
 The repository mldefects_results has the same layout as `results/` here, plus a `weights/`
@@ -224,7 +259,9 @@ python plot.py --from-weights
 
 `evaluate` checks that each file's test indices match the cross-validation split of `data/` and
 that the MAEs computed from the weights match those recorded at training time (to 1e-6 eV). It
-also prints each cell next to the published value.
+also prints each cell next to the published value. For the Fig. 3 learning curves,
+`python cv_models.py evaluate-extra --jobs 16` recomputes the MAEs of all 4088 MLP curve fits
+from `weights/curves/` and checks them against `results.toml`, from which `plot.py` draws Fig. 3.
 
 The weights were trained with `cv_models.py train` from the hyperparameters selected in the
 published optimization results, in the environment recorded in each file (Python 3.12.3,

@@ -246,6 +246,22 @@ def fold_predictions(descriptor, defect_type, target_variable, model, scaling, f
     return test_data[target_variable].to_numpy(), pred
 
 
+def load_model(descriptor, defect_type, target_variable, model, scaling, fold):
+    """The saved model of one fold as a function: unscaled input parameters (2D array, columns
+    FEATURES[descriptor]) -> predictions in eV. Kernel ridge models rebuild their training inputs
+    from data/."""
+    path = weights_path(descriptor, defect_type, target_variable, model, scaling, fold)
+    with np.load(path) as stored:
+        weights = dict(stored)
+    meta = json.loads(str(weights.pop("meta")))
+    X_train = None
+    if model == "kernel":
+        data, data_single = load_datasets(descriptor, defect_type)
+        train_data, _ = frames(data, data_single, *split(data, fold))
+        X_train = train_data[FEATURES[descriptor]].to_numpy()
+    return lambda X: predict(weights, meta, X, X_train)
+
+
 def matching_fold(descriptor, defect_type, target_variable, true_values):
     """The fold whose test set has exactly these target values (in order), or None."""
     data, _ = load_datasets(descriptor, defect_type, columns=[target_variable])
