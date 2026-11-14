@@ -1382,7 +1382,7 @@ for defect_type in defect_types:
                 # plt.legend(bbox_to_anchor=(0.5, 1), loc='lower center')
             # ax.set_box_aspect(1)
             # fig.tight_layout()
-            plt.subplots_adjust(right=.9, left=0.1)
+            plt.subplots_adjust(right=.9, left=0.15)
 
             plt.savefig(FIGURES_DIR / f"scatter_{n}.pdf", dpi=300)
 

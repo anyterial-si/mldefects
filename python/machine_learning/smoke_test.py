@@ -12,11 +12,11 @@ What it does (the repository's results/ folder is never modified):
      kernel ridge cells, then aggregate_results.py kernel.
   3. Checks every recomputed MAE against the published optimization files (1e-6 eV).
   4. Runs make_tables.py on the temporary results and checks all 140 MAE cells of the
-     generated Table 3(a) against the paper (to the 3 printed decimals). Table 4 is printed
-     for comparison; its two MLP ZPL cells are known to differ from the paper (see README).
+     generated Table 3(a) and Table 4 against the paper (to the 3 printed decimals).
 
 The MLP cells are not re-trained (hours of CPU time, and not bit-reproducible across
-numerical environments; see README) and are taken from optim_results_neural_clean.db.
+numerical environments; see README): their MAEs are taken from cv_scores.toml (Table 3)
+and results.toml (Table 4).
 Exit status is 0 if all checks pass.
 """
 
@@ -67,18 +67,18 @@ for _d in ("WLC", "WCC"):
 TABLE_3_COLUMNS = ["unscaled_ridge", "unscaled_kernel", "standard_ridge", "standard_kernel",
                    "standard_mlp", "normal_ridge", "normal_kernel"]
 PAPER_TABLE_3 = {
-    ("vacancy-substitutional", "A"): "2.598/0.270 1.263/0.202 2.598/0.270 2.003/0.210 0.437/0.231 2.597/0.270 2.020/0.258",
-    ("vacancy-substitutional", "WL"): "2.576/0.266 1.314/0.242 2.575/0.266 1.986/0.250 0.476/0.252 2.572/0.266 2.008/0.257",
-    ("vacancy-substitutional", "WC"): "2.576/0.266 1.314/0.242 2.575/0.266 1.986/0.250 0.483/0.252 2.572/0.266 2.008/0.257",
-    ("vacancy-substitutional", "WLC"): "2.595/0.270 1.314/0.248 2.594/0.270 2.004/0.259 0.529/0.262 2.592/0.270 2.021/0.262",
-    ("vacancy-substitutional", "WCC"): "2.595/0.270 1.314/0.248 2.594/0.270 2.004/0.259 0.536/0.257 2.592/0.270 2.021/0.262",
-    ("interstitial", "A"): "3.562/0.280 2.530/0.230 3.559/0.280 3.072/0.254 2.575/0.242 3.554/0.280 3.047/0.259",
-    ("interstitial", "WL"): "3.462/0.281 2.420/0.232 3.460/0.281 2.851/0.259 1.486/0.244 3.461/0.281 2.880/0.265",
-    ("interstitial", "WC"): "3.301/0.280 1.818/0.237 3.301/0.280 2.214/0.260 1.101/0.257 3.301/0.280 2.418/0.266",
-    ("interstitial", "WLC"): "3.482/0.279 2.410/0.230 3.480/0.279 2.850/0.257 1.607/0.243 3.481/0.279 2.882/0.263",
-    ("interstitial", "WCC"): "3.326/0.279 1.841/0.235 3.326/0.279 2.225/0.259 1.172/0.258 3.326/0.279 2.422/0.265",
+    ("vacancy-substitutional", "A"): "2.598/0.270 1.263/0.202 2.598/0.270 2.003/0.210 0.478/0.234 2.597/0.270 2.020/0.258",
+    ("vacancy-substitutional", "WL"): "2.576/0.266 1.314/0.242 2.575/0.266 1.986/0.250 0.496/0.252 2.572/0.266 2.008/0.257",
+    ("vacancy-substitutional", "WC"): "2.576/0.266 1.314/0.242 2.575/0.266 1.986/0.250 0.485/0.252 2.572/0.266 2.008/0.257",
+    ("vacancy-substitutional", "WLC"): "2.595/0.270 1.314/0.248 2.594/0.270 2.004/0.259 0.528/0.262 2.592/0.270 2.021/0.262",
+    ("vacancy-substitutional", "WCC"): "2.595/0.270 1.314/0.248 2.594/0.270 2.004/0.259 0.545/0.257 2.592/0.270 2.021/0.262",
+    ("interstitial", "A"): "3.562/0.280 2.530/0.230 3.559/0.280 3.072/0.254 2.582/0.246 3.554/0.280 3.047/0.259",
+    ("interstitial", "WL"): "3.462/0.281 2.420/0.232 3.460/0.281 2.851/0.259 1.523/0.247 3.461/0.281 2.880/0.265",
+    ("interstitial", "WC"): "3.301/0.280 1.818/0.237 3.301/0.280 2.214/0.260 1.123/0.257 3.301/0.280 2.418/0.266",
+    ("interstitial", "WLC"): "3.482/0.279 2.410/0.230 3.480/0.279 2.850/0.257 1.633/0.248 3.481/0.279 2.882/0.263",
+    ("interstitial", "WCC"): "3.326/0.279 1.841/0.235 3.326/0.279 2.225/0.259 1.182/0.258 3.326/0.279 2.422/0.265",
 }
-PAPER_TABLE_4 = "2.563 1.088 0.344 0.266 0.166 0.248 3.300 1.540 0.807 0.279 0.223 0.241"
+PAPER_TABLE_4 = "2.563 1.088 0.379 0.266 0.166 0.171 3.300 1.540 0.820 0.279 0.223 0.235"
 
 
 def paper_table_3():
@@ -143,7 +143,7 @@ def main():
 
     tmp = Path(tempfile.mkdtemp(prefix="mldefects_smoke_"))
     tmp_results = tmp / "results"
-    shutil.copytree(RESULTS_DIR, tmp_results, ignore=shutil.ignore_patterns("*_partial_results", "figures", "jobs", "tables"))
+    shutil.copytree(RESULTS_DIR, tmp_results, ignore=shutil.ignore_patterns("*_partial_results", "weights", "figures", "jobs", "tables"))
     env = dict(os.environ, MLDEFECTS_RESULTS_DIR=str(tmp_results), OMP_NUM_THREADS="1",
                OPENBLAS_NUM_THREADS="1", MKL_NUM_THREADS="1", MPLBACKEND="Agg")
     python = sys.executable
@@ -217,8 +217,9 @@ def main():
     print(f"   {n_cells} cells compared")
 
     projections = re.findall(r"\d+\.\d{3}", (tmp_results / "tables" / "projections.tex").read_text().split("\\midrule", 1)[1])
-    print(f"   Table 4 generated: {' '.join(projections[:12])}")
-    print(f"   Table 4 paper    : {PAPER_TABLE_4}   (MLP ZPL cells 6 and 12 known to differ, see README)")
+    checker.check(projections[:12] == PAPER_TABLE_4.split(),
+                  f"Table 4 {' '.join(projections[:12])} vs paper {PAPER_TABLE_4}")
+    print(f"   Table 4: {' '.join(projections[:12])}")
 
     if args.keep:
         print(f"Temporary results kept in {tmp}")

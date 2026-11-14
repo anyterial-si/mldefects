@@ -10,8 +10,8 @@ ADAQ high-throughput database.
 
 This repository contains everything needed to rerun the calculations, plus the output values
 that the paper's tables and figures were made from. The fitted model weights of every Table 3
-model and the raw per-job outputs are in the companion repository **mldefects_results**
-(`<URL of mldefects_results>`, about 430 MB); see "Saved model weights".
+model and of every MLP learning-curve fit, and the raw per-job outputs, are in the companion
+repository **mldefects_results** (`<URL of mldefects_results>`); see "Saved model weights".
 
 ## Repository layout
 
@@ -22,18 +22,19 @@ python/machine_learning/      all scripts (run from any directory)
     input_parameters.py       input-parameter (feature) lists of the descriptors
     cv_models.py              per-fold model weights: train, and evaluate (see "Saved model weights")
 results/
-    <descriptor>/<defect type>/<FE|ZPL>/   published optimization results, learning curves, scatter data
+    <descriptor>/<defect type>/<FE|ZPL>/   published optimization results, MAEs of the Table 3 models,
+                                           learning curves, scatter data
 requirements.txt
 ```
 
-Running the scripts also creates the following in `results/`. These are ignored by git, and the
-published versions of the first three are in mldefects_results:
+Running the scripts also creates the following in `results/`. The published versions of the
+first two are in mldefects_results:
 
 ```
 results/
     <descriptor>/<defect type>/<FE|ZPL>/
-        weights/              fitted weights of every Table 3 model, one file per CV fold
-        cv_scores.toml        per-fold MAEs computed from weights/
+        weights/              fitted weights of every Table 3 model, one file per CV fold;
+                              curves/: fitted weights of the MLP learning-curve fits
         {kernel,neural}_partial_results/   one learning-curve point per file
     figures/                  generated figures (supplementary/ for optimization plots)
     tables/                   generated LaTeX tables
@@ -87,7 +88,7 @@ repository. The rule above reproduces every `cleaned` file exactly from `origina
 | Paper item | Script | Reads | Writes |
 |---|---|---|---|
 | Table 2 (dataset sizes, mean FE / ZPL) | `read_target_average.py` | `data/*_cleaned.csv` | stdout |
-| Table 3 (MAEs, optimal hyperparameters) | `make_tables.py` | `optim_results_linear*.toml`, `optim_results_kernel*.toml`, `optim_results_neural_clean.db` (or `cv_scores.toml` with `--from-weights`) | `results/tables/all_results_table.tex` |
+| Table 3 (MAEs, optimal hyperparameters) | `make_tables.py` | `optim_results_linear*.toml`, `optim_results_kernel*.toml`, `optim_results_neural_clean.db` (MLP configuration), `cv_scores.toml` (MLP MAEs; all MAEs with `--from-weights`) | `results/tables/all_results_table.tex` |
 | Table 4 (projection scores) | `make_tables.py` | `results.toml` (or `cv_scores.toml` with `--from-weights`) | `results/tables/projections.tex` |
 | Fig. 1 (input-parameter statistics) | `input_parameters_details.py` | `data/*_cleaned.csv` | `results/figures/*_input_parameter_details_*.pdf` |
 | Fig. 2 (covariance / Pearson heatmaps) | `correlation_heatmaps.py` | `data/*_cleaned.csv` | `results/figures/*_heatmap_*.pdf` |
@@ -107,12 +108,14 @@ from the shipped results (about 30 min, mostly `plot.py` and `neural_heatmaps.py
 | `optim_results_linear{,_unscaled,_normal}.toml` | ridge: MAE for each alpha, `best_params` | `optim_linear.py` |
 | `optim_results_kernel{,_unscaled,_normal}.toml` | kernel ridge: MAE for each (gamma, alpha), `best_params` | `optim_kernel.py` + `aggregate_results.py kernel` |
 | `optim_results_neural.db` | MLP optimization: per-fold MAE of every configuration tried (SQLite) | `optim_neural.py` + `aggregate_results.py neural` |
-| `optim_results_neural_clean.db` | re-evaluation of the selected MLP configurations; used for Table 3 | same, with `--neural_target _clean` |
+| `optim_results_neural_clean.db` | 10-fold evaluation of the candidate MLP configurations in the original search; selects the Table 3 configuration | same, with `--neural_target _clean` |
+| `cv_scores.toml` | per-fold train and test MAEs of every Table 3 model, computed from its saved weights; the Table 3 MLP MAEs | `cv_models.py train` + `evaluate` |
 | `results.toml` | learning curves (`MAE_percent_list_*`), averages from `data_average.py` | `ml.py`, `aggregate_results.py curves`, `data_average.py` |
 | `results_scatter.toml` | test-set predictions for the scatter plots | `ml.py` |
 | `{kernel,neural}_partial_results/` (mldefects_results only) | one learning-curve point per file | `ml.py` |
 | `weights/{ridge,kernel,neural}{,_unscaled,_normal}_fold{1-10}.npz` (mldefects_results only) | fitted weights of each Table 3 model for each CV fold | `cv_models.py train` |
-| `cv_scores.toml` (mldefects_results only) | per-fold train and test MAEs computed from `weights/` | `cv_models.py evaluate` |
+| `weights/curves/neural_d{1-9}_f{n}.npz` (mldefects_results only) | fitted weights of each MLP learning-curve fit (Fig. 3) | `ml.py --save_weights` |
+| `weights/neural_alternative_fold{1-10}.npz` (mldefects_results only) | the alternative MLP configurations compared in Supplementary Material section I | `cv_models.py train --name neural_alternative` |
 
 Complete kernel and MLP learning curves (1022 fits each) were computed only for the four
 cases shown in Fig. 3. In the other `results.toml` files those curves are filled with zeros.
@@ -143,7 +146,10 @@ scripts are needed.
 3. **MLP optimization**: one job per configuration and fold, with standardized scaling. The
    search was staged by hand (see the paper): (i) 25/50/75/100 neurons per layer × activation ×
    solver on 4 folds; (ii) refining the neuron count; (iii) all 10 folds over alpha. The selected
-   configurations (paper Table 3(c)) were then re-evaluated with `--neural_target _clean`.
+   candidate configurations were evaluated on all 10 folds with `--neural_target _clean`, and
+   the one with the lowest mean MAE is the Table 3 configuration (Supplementary Table S1(c)).
+   This search was run in the original, unrecorded, environment; the published MLP MAEs come
+   from retraining the selected configurations (step 5).
    Fixed parameters: `max_iter` and `max_fun` 9999999999999, `tol` 1e-4, `random_state` 42.
    The paper's "NAG" solver is `"solver": "sgd"` with the sklearn defaults (Nesterov momentum
    0.9, learning rate 1e-3).
@@ -162,20 +168,24 @@ scripts are needed.
    python ml.py --model linear --material sic_wyckoff_letter --defect_type vacancy-substitutional --target_variable FE --scaling normal
    python ml.py --model kernel --material sic_no_wyckoff --defect_type vacancy-substitutional --target_variable ZPL --scaling unscaled \
        --train_data_percentage 9 --fold 10      # 1022 jobs: d = 1..9, fold = 1..C(10, d); omit both to run all in one job
-   python ml.py --model neural ... --neural_params '<Table 3(c) configuration as above>'
+   python ml.py --model neural ... --neural_params '<Table S1(c) configuration as above>' [--save_weights]
    python aggregate_results.py curves        # partial results -> results.toml
    python data_average.py --material ... --defect_type ... --target_variable ...
    ```
    `ml.py` stores the test predictions of fold `--scatter_fold` (default 10) at 9/10 training
    data for the scatter plot. The published Fig. 4 uses fold 10, except panel (c) (I FE, MLP),
-   which uses fold 1.
-5. **Per-fold model weights** (optional; lets others regenerate Tables 3–4 and Fig. 4 without
-   training, see "Saved model weights"): 140 cells × 10 folds, with the hyperparameters chosen in
-   steps 1–3.
+   which uses fold 1. With `--save_weights`, the weights of every fit are saved to
+   `weights/curves/`. In the same environment, the fits at 9/10 training data are identical to
+   the Table 3 models of step 5 (this holds for the published curves and weights).
+5. **Per-fold model weights and the Table 3 MLP MAEs**: 140 cells × 10 folds, with the
+   hyperparameters chosen in steps 1–3. `evaluate` writes `cv_scores.toml`, from which
+   `make_tables.py` takes the MLP MAEs (see "Saved model weights").
    ```
    python cv_models.py train --descriptor sic_no_wyckoff --defect_type vacancy-substitutional --target_variable FE \
        --model neural [--scaling standard] [--fold 1 2 ...]        # --model ridge | kernel | neural
    python cv_models.py evaluate              # -> cv_scores.toml
+   python cv_models.py train ... --model neural --name neural_alternative --neural_params '<JSON>'   # Supplementary section I
+   python cv_models.py evaluate-extra --jobs 16   # checks weights/curves/ (about 37 GB) and named configurations
    ```
 6. **Tables and figures**:
    ```
@@ -217,13 +227,12 @@ that the MAEs computed from the weights match those recorded at training time (t
 also prints each cell next to the published value.
 
 The weights were trained with `cv_models.py train` from the hyperparameters selected in the
-published optimization results (scikit-learn 1.6.1, SciPy 1.15.3, NumPy 2.2.6, OpenBLAS). The
-weights reproduce every ridge and kernel ridge cell of Table 3 to within 3e-7 eV. The MLP cells
-cannot be reproduced exactly (see "Reproducibility notes"). Six of the 20 MLP cells, the small
-Adam and NAG networks for ZPL, match exactly. The others differ by −0.001 to +0.041 eV; the
-largest is the VS FE headline model, which gives 0.478 eV against the published 0.437 eV. Without
-`--from-weights`, the tables and figures are made from the published values in `results/` and
-match the paper, except for the two Table 4 cells described in "Reproducibility notes".
+published optimization results, in the environment recorded in each file (Python 3.12.3,
+scikit-learn 1.6.1, SciPy 1.15.3, NumPy 2.2.6 with its bundled OpenBLAS, one thread; versions as
+in `requirements.txt`). The ridge and kernel ridge weights reproduce Table 3 to within 3e-7 eV.
+The MLP MAEs in Table 3 and the MLP learning curves of Fig. 3 *are* the MAEs of these weights
+(see "Reproducibility notes"). Without `--from-weights`, the tables and figures are made from
+the values shipped in `results/`; both routes give the published tables and figures.
 
 ## Smoke test
 
@@ -237,7 +246,8 @@ The smoke test does the following:
 * reruns the 60 ridge cells and the 30 VS kernel ridge cells of Table 3 at their published
   optimal hyperparameters, in a temporary copy of `results/`;
 * compares them with the published optimization files;
-* regenerates Table 3 with `make_tables.py` and checks all 140 MAE cells against the paper.
+* regenerates Tables 3 and 4 with `make_tables.py` and checks all 140 MAE cells and the 12
+  projection scores against the paper.
 
 `--full` also reruns the 30 interstitial kernel ridge cells, which takes several CPU-hours.
 The MLP cells are not retrained (see below).
@@ -247,19 +257,25 @@ The MLP cells are not retrained (see below).
 * **Ridge and kernel ridge** reproduce to floating-point precision (≤ 1e-6 eV), both the full
   optimization grids and the learning curves.
 * **MLP results are sensitive to the numerical environment.** With effectively unlimited
-  `max_iter`, the L-BFGS fits run for about 29 000–47 000 iterations. Different SciPy versions,
-  BLAS libraries or thread counts give different per-fold MAEs (up to about 0.07 eV for the
-  same fold). The original environment was not recorded. Rerunning all 10 folds of the VS FE
-  headline model (published 0.437 eV) gave 0.485 eV (scikit-learn 1.6.1, SciPy 1.18.1,
-  OpenBLAS, 1 thread) and 0.478 eV for the saved weights (SciPy 1.15.3). Changing only the
-  MLP `random_state` (0–4) gives 10-fold means between 0.463 and 0.542 eV. That spread (about
-  0.03 eV standard deviation) is as large as the environment effect. The published value sits
-  at the low end of what reruns produce, as is expected when one configuration is chosen from
-  about 3 300 using the same folds that report its MAE. The qualitative conclusions are unchanged.
-* **Table 4**: the MLP ZPL projections computed from the shipped `results.toml` are 0.169 (VS)
-  and 0.233 (I), while the paper shows 0.248 and 0.241. The test-MAE part matches Table 3, so
-  the stored MLP training MAEs differ from those the paper's table was made with. The saved
-  weights give 0.171 and 0.235.
+  `max_iter`, the L-BFGS fits run for tens of thousands of iterations, and the large Adam
+  networks for thousands of epochs. Different SciPy/NumPy versions, BLAS kernels or thread
+  counts give different per-fold MAEs (up to about 0.07 eV for the same fold). The MLP
+  configurations were selected in an original, unrecorded environment (the heatmaps in the
+  Supplementary Material show those scores). The published MLP MAEs, learning curves and Fig. 4
+  predictions come from retraining the selected configurations in the recorded environment
+  above; this changed the 10-fold means by up to 0.04 eV (e.g. VS FE 0.437 → 0.478 eV).
+  Changing only the MLP `random_state` (0–4) moves the VS FE mean between 0.463 and 0.542 eV, so
+  the environment effect is within the run-to-run spread. The qualitative conclusions are
+  unchanged.
+* **Exact MLP reproduction.** In the recorded environment (`requirements.txt`, Python 3.12,
+  pip wheels, `OMP_NUM_THREADS=OPENBLAS_NUM_THREADS=1`), retraining gives bit-identical weights
+  on the machine the weights were made on (Intel Broadwell) and, with
+  ```
+  export OPENBLAS_CORETYPE=Haswell
+  export NPY_DISABLE_CPU_FEATURES="AVX512F AVX512CD AVX512_SKX AVX512_CLX AVX512_CNL AVX512_ICL AVX512_SPR"
+  ```
+  also on an AVX-512 machine (Intel Xeon Gold 6130); without these settings the latter gives
+  different fits. If you cannot reproduce a fit, use the saved weights in mldefects_results.
 * **`optim_results_neural.db`** has no fold column for the published runs. Some configurations
   have more than 10 rows (repeated runs) and some MAE rows have no matching hyperparameter row.
   Runs aggregated with the current `aggregate_results.py` record the fold.

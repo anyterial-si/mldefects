@@ -1,10 +1,15 @@
 """Paper Table 3 (all MAEs and optimal hyperparameters) and Table 4 (projection scores) as LaTeX.
 
-Reads results/<case>/optim_results_{linear,kernel}*.toml, optim_results_neural_clean.db and
-results.toml; writes results/tables/all_results_table.tex and results/tables/projections.tex.
+Reads results/<case>/optim_results_{linear,kernel}*.toml, optim_results_neural_clean.db,
+cv_scores.toml and results.toml; writes results/tables/all_results_table.tex and
+results/tables/projections.tex.
 
-With --from-weights, all MAEs (Table 3 and Table 4) are instead taken from results/<case>/cv_scores.toml,
-which `python cv_models.py evaluate` computes from the saved per-fold model weights. The
+Ridge and kernel ridge MAEs come from the optimization results. The MLP configuration of each
+cell is the one selected in optim_results_neural_clean.db (the original search); its MAE is that
+of the configuration retrained in the recorded environment, from cv_scores.toml (written by
+`python cv_models.py evaluate` from the per-fold weights, see cv_models.py).
+
+With --from-weights, all MAEs (Table 3 and Table 4) are taken from cv_scores.toml. The
 hyperparameters shown are the same in both modes.
 """
 import sqlite3
@@ -197,7 +202,8 @@ for defect_type in defect_types:
 
             for target_variable in target_variables:
                 if not scaling:
-                    # Table 3 uses the "clean" re-evaluation database of the selected MLP configurations
+                    # The MLP configuration is selected in the "clean" database of the original search;
+                    # Table 3 shows its MAE after retraining in the recorded environment (cv_scores.toml)
                     db_optim_path = target_folder(descriptor, defect_type, target_variable) / "optim_results_neural_clean.db"
 
                     conn = sqlite3.connect(db_optim_path, timeout=3600)
@@ -234,8 +240,7 @@ for defect_type in defect_types:
                     try:
                         neural_min_mae = float(min(neural_maeas))
                         all_scores_dict[defect_type]["mlpregressor"][target_variable].append(
-                            weights_score(descriptor, defect_type, target_variable, "neural") if FROM_WEIGHTS
-                            else neural_min_mae)
+                            weights_score(descriptor, defect_type, target_variable, "neural"))
                         hyperparameters_index = neural_maeas.index(neural_min_mae)
                         hyperparameters_selected_id = hyperparameters_ids[hyperparameters_index]
                         cursor.execute(

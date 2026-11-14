@@ -13,6 +13,8 @@ Output, in results/<descriptor>/<defect_type>/<target>/:
                    to run all. aggregate_results.py collects the partial results into results.toml.
   All models: the test-set predictions of fold --scatter_fold (default 10) at d = 9 are
   written to results_scatter.toml as scatter_{model}_true / _pred / _fold.
+  --save_weights: the fitted weights of every fit are also saved, to
+                   weights/curves/{ridge,kernel,neural}{suffix}_d{d}_f{f}.npz (format as in cv_models.py).
 
 Hyperparameters are read from the optimization results for the chosen --scaling
 (optim_results_{linear,kernel}{suffix}.toml); MLP parameters are given with --neural_params.
@@ -29,11 +31,14 @@ from common import CV_RANDOM_STATE, N_SPLITS, SCALING_SUFFIX, ensure_dir
 from init_ml import (
     data,
     data_single,
+    defect_type,
     features,
     fold,
+    material,
     model_type,
     neural_params,
     pd,
+    save_weights,
     scaling,
     scatter_fold,
     sys,
@@ -141,6 +146,20 @@ for data_percentage_k in range(1, N_SPLITS):
         mae_train = float(mean_absolute_error(train_y, y_pred_train))
         mae_test = float(mean_absolute_error(test_y, y_pred_test))
         results.append((data_percentage_k, f, mae_train, mae_test))
+
+        if save_weights:
+            from cv_models import curve_weights_path, save_weights_file, weight_arrays
+            cv_model = {"linear": "ridge"}.get(model_type, model_type)
+            meta = {"descriptor": material, "defect_type": defect_type, "target_variable": target_variable,
+                    "model": cv_model, "scaling": scaling, "train_data_percentage": data_percentage_k, "fold": f,
+                    "train_folds": [int(i) for i in train_fold_ids],
+                    "hyperparameters": neural_params if model_type == "neural" else best_params,
+                    "mae_train": mae_train, "mae_test": mae_test,
+                    "n_train": len(train_data), "n_test": len(test_data)}
+            arrays = weight_arrays(cv_model, model, scaling, None if scaling == "unscaled" else scaler_X,
+                                   None if scaling == "unscaled" else scaler_y)
+            save_weights_file(curve_weights_path(material, defect_type, target_variable, cv_model, scaling,
+                                                 data_percentage_k, f), meta, arrays, test_index, model)
 
         if data_percentage_k == N_SPLITS - 1 and f == scatter_fold:
             scatter = {

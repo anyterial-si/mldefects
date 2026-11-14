@@ -44,6 +44,8 @@ parser.add_argument("--neural_params", type=str, required=False,
                     help="JSON dict of MLPRegressor parameters")
 parser.add_argument("--neural_target", choices=["", "_clean"], default="",
                     help="suffix of the optim_results_neural*.db the job belongs to")
+parser.add_argument("--save_weights", action="store_true",
+                    help="ml.py: also save the fitted weights of every fit to weights/curves/ (see cv_models.py)")
 
 args = parser.parse_args()
 
@@ -61,6 +63,7 @@ kernel_optim_target = args.kernel_optim_target
 kernel_optim_alpha_index = args.kernel_optim_alpha_index
 neural_target = args.neural_target
 neural_params = json.loads(args.neural_params) if args.neural_params else None
+save_weights = args.save_weights
 
 target_folder = _target_folder(material, defect_type, target_variable)
 toml_path = target_folder / "results.toml"

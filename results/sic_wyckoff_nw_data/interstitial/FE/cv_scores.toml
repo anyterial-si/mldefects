@@ -1,0 +1,228 @@
+[ridge_unscaled]
+test = [ 3.2764127413897755, 3.3574584063993678, 3.287166681022018, 3.2898060739872554, 3.26082954981003, 3.289857096933487, 3.409475261174604, 3.4716028707546096, 3.342703819991385, 3.279295405207743,]
+train = [ 3.3274853723680557, 3.319234314163895, 3.325413615450442, 3.325126525744233, 3.3285518482205796, 3.3265912493315932, 3.3099516299122405, 3.302771146878637, 3.3187606572628052, 3.3262053129229576,]
+mean_test = 3.326460790667027
+mean_train = 3.3210091672255446
+
+[ridge]
+test = [ 3.2765218659483835, 3.357749667323258, 3.286948430153253, 3.2901560959526144, 3.2600542863322763, 3.289952468888162, 3.409262470076948, 3.471847175626707, 3.342907485940459, 3.279257135135819,]
+train = [ 3.3275596631302715, 3.319298067926215, 3.3254949171302095, 3.3252254493774167, 3.3286556417556437, 3.3266722842822825, 3.3100568881142705, 3.3028273193057633, 3.3188319456690643, 3.326255424958075,]
+mean_test = 3.326465708137788
+mean_train = 3.3210877601649216
+
+[ridge_normal]
+test = [ 3.27652186597904, 3.357749667441381, 3.2869484301868526, 3.2901560959366747, 3.2600542863833857, 3.2899524689057436, 3.409262470152166, 3.4718471756789806, 3.3429074859668844, 3.2792571352383235,]
+train = [ 3.3275596631959874, 3.3192980679644486, 3.325494917186586, 3.325225449424306, 3.328655641802008, 3.3266722843243555, 3.3100568881564594, 3.3028273193564397, 3.318831945720459, 3.3262554250040237,]
+mean_test = 3.326465708186943
+mean_train = 3.321087760213507
+
+[kernel_unscaled]
+test = [ 1.7721561792425529, 1.8737905393103478, 1.8221295409881533, 1.8092215090244648, 1.8271714329876965, 1.8519608680089905, 1.895537884201088, 1.8851315724725957, 1.8480341346176599, 1.8257502969157782,]
+train = [ 1.2358443014713325, 1.227576625328472, 1.230252608207775, 1.2342618938387115, 1.2310532259902023, 1.2282326935833792, 1.219461927551693, 1.2251420795937122, 1.2291682458401567, 1.2317908580099117,]
+mean_test = 1.8410883957769328
+mean_train = 1.2292784459415347
+
+[kernel]
+test = [ 2.179365215533324, 2.2604543673946824, 2.2183246519488624, 2.185718138004264, 2.21462175477983, 2.1992868397861005, 2.279678536534324, 2.3010115288080093, 2.186886259037655, 2.2285684014729927,]
+train = [ 1.773728282319318, 1.7628897515321362, 1.7699571606919202, 1.7728276002436196, 1.7722477321821486, 1.7736082753687725, 1.7633842190307236, 1.7581184515613382, 1.7724754426882137, 1.7711452011903361,]
+mean_test = 2.2253915693300046
+mean_train = 1.769038211680853
+
+[kernel_normal]
+test = [ 2.36316290973307, 2.4439705557694387, 2.4171931560007476, 2.3419741123131397, 2.3949578686202866, 2.380209941795144, 2.494213255516385, 2.516784523196591, 2.440914690101838, 2.431584646659699,]
+train = [ 2.1282455540278455, 2.119774353155415, 2.1282706025462366, 2.134240566787616, 2.1286519637890153, 2.1320559173552676, 2.120290595133419, 2.112526753533289, 2.1295360547618905, 2.128099011062749,]
+mean_test = 2.422496565970634
+mean_train = 2.1261691372152742
+
+[neural]
+test = [ 1.127936656511689, 1.0978642319815106, 1.1805314438423093, 1.124809966127592, 1.2861837990328073, 1.1946179668532153, 1.2477346439942563, 1.1073464081126339, 1.1786529634221592, 1.2699364731222635,]
+train = [ 0.5632476968031789, 0.582124693304819, 0.5562838163888519, 0.549813504401087, 0.5904314224471778, 0.6051255489255778, 0.5723549179254975, 0.5750875813758943, 0.6045160311489222, 0.5579404757021392,]
+mean_test = 1.1815614553000438
+mean_train = 0.5756925688423146
+n_iter = [ 40553, 32925, 42272, 46422, 34516, 34228, 36795, 42819, 28738, 42424,]
+
+[ridge_unscaled.hyperparameters]
+alpha = 0.5623413251903491
+
+[ridge_unscaled.environment]
+python = "3.12.3"
+numpy = "2.2.6"
+scipy = "1.15.3"
+scikit-learn = "1.6.1"
+pandas = "2.2.3"
+machine = "x86_64"
+date = "2026-11-05"
+[[ridge_unscaled.environment.threadpools]]
+internal_api = "openmp"
+num_threads = 4
+
+[[ridge_unscaled.environment.threadpools]]
+internal_api = "openblas"
+version = "0.3.29"
+num_threads = 4
+
+[[ridge_unscaled.environment.threadpools]]
+internal_api = "openblas"
+version = "0.3.28"
+num_threads = 4
+
+[ridge.hyperparameters]
+alpha = 1e-8
+
+[ridge.environment]
+python = "3.12.3"
+numpy = "2.2.6"
+scipy = "1.15.3"
+scikit-learn = "1.6.1"
+pandas = "2.2.3"
+machine = "x86_64"
+date = "2026-11-05"
+[[ridge.environment.threadpools]]
+internal_api = "openblas"
+version = "0.3.28"
+num_threads = 4
+
+[[ridge.environment.threadpools]]
+internal_api = "openmp"
+num_threads = 4
+
+[[ridge.environment.threadpools]]
+internal_api = "openblas"
+version = "0.3.29"
+num_threads = 4
+
+[ridge_normal.hyperparameters]
+alpha = 1e-8
+
+[ridge_normal.environment]
+python = "3.12.3"
+numpy = "2.2.6"
+scipy = "1.15.3"
+scikit-learn = "1.6.1"
+pandas = "2.2.3"
+machine = "x86_64"
+date = "2026-11-05"
+[[ridge_normal.environment.threadpools]]
+internal_api = "openblas"
+version = "0.3.28"
+num_threads = 4
+
+[[ridge_normal.environment.threadpools]]
+internal_api = "openblas"
+version = "0.3.29"
+num_threads = 4
+
+[[ridge_normal.environment.threadpools]]
+internal_api = "openmp"
+num_threads = 4
+
+[kernel_unscaled.hyperparameters]
+alpha = 0.001
+gamma = 0.01694915254237288
+
+[kernel_unscaled.environment]
+python = "3.12.3"
+numpy = "2.2.6"
+scipy = "1.15.3"
+scikit-learn = "1.6.1"
+pandas = "2.2.3"
+machine = "x86_64"
+date = "2026-11-05"
+[[kernel_unscaled.environment.threadpools]]
+internal_api = "openblas"
+version = "0.3.28"
+num_threads = 4
+
+[[kernel_unscaled.environment.threadpools]]
+internal_api = "openblas"
+version = "0.3.29"
+num_threads = 4
+
+[[kernel_unscaled.environment.threadpools]]
+internal_api = "openmp"
+num_threads = 4
+
+[kernel.hyperparameters]
+alpha = 0.01
+gamma = 0.06666666666666667
+
+[kernel.environment]
+python = "3.12.3"
+numpy = "2.2.6"
+scipy = "1.15.3"
+scikit-learn = "1.6.1"
+pandas = "2.2.3"
+machine = "x86_64"
+date = "2026-11-05"
+[[kernel.environment.threadpools]]
+internal_api = "openmp"
+num_threads = 4
+
+[[kernel.environment.threadpools]]
+internal_api = "openblas"
+version = "0.3.29"
+num_threads = 4
+
+[[kernel.environment.threadpools]]
+internal_api = "openblas"
+version = "0.3.28"
+num_threads = 4
+
+[kernel_normal.hyperparameters]
+alpha = 0.001
+gamma = 1.0
+
+[kernel_normal.environment]
+python = "3.12.3"
+numpy = "2.2.6"
+scipy = "1.15.3"
+scikit-learn = "1.6.1"
+pandas = "2.2.3"
+machine = "x86_64"
+date = "2026-11-05"
+[[kernel_normal.environment.threadpools]]
+internal_api = "openblas"
+version = "0.3.29"
+num_threads = 4
+
+[[kernel_normal.environment.threadpools]]
+internal_api = "openblas"
+version = "0.3.28"
+num_threads = 4
+
+[[kernel_normal.environment.threadpools]]
+internal_api = "openmp"
+num_threads = 4
+
+[neural.hyperparameters]
+hidden_layer_sizes = [ 72, 72, 72,]
+activation = "tanh"
+solver = "lbfgs"
+alpha = 0.1
+max_iter = 9999999999999
+tol = 0.0001
+max_fun = 9999999999999
+random_state = 42
+
+[neural.environment]
+python = "3.12.3"
+numpy = "2.2.6"
+scipy = "1.15.3"
+scikit-learn = "1.6.1"
+pandas = "2.2.3"
+machine = "x86_64"
+date = "2026-11-04"
+[[neural.environment.threadpools]]
+internal_api = "openblas"
+version = "0.3.29"
+num_threads = 1
+
+[[neural.environment.threadpools]]
+internal_api = "openmp"
+num_threads = 1
+
+[[neural.environment.threadpools]]
+internal_api = "openblas"
+version = "0.3.28"
+num_threads = 1
+

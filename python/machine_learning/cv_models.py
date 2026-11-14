@@ -60,9 +60,15 @@ def cell_name(model, scaling):
     return f"{model}{SCALING_SUFFIX[scaling]}"
 
 
-def weights_path(descriptor, defect_type, target_variable, model, scaling, fold):
+def weights_path(descriptor, defect_type, target_variable, model, scaling, fold, name=None):
     return (target_folder(descriptor, defect_type, target_variable) / "weights"
-            / f"{cell_name(model, scaling)}_fold{fold}.npz")
+            / f"{name or cell_name(model, scaling)}_fold{fold}.npz")
+
+
+def curve_weights_path(descriptor, defect_type, target_variable, model, scaling, d, fold):
+    """Weights of one learning-curve fit (ml.py --save_weights): d tenths of the data, fold-th combination."""
+    return (target_folder(descriptor, defect_type, target_variable) / "weights" / "curves"
+            / f"{cell_name(model, scaling)}_d{d}_f{fold}.npz")
 
 
 def hyperparameters(descriptor, defect_type, target_variable, model, scaling):
@@ -109,8 +115,37 @@ def environment():
             "date": datetime.date.today().isoformat()}
 
 
-def train(descriptor, defect_type, target_variable, model, scaling, folds):
-    """Fit the cell on the given folds exactly as optim_*.py / ml.py do, and save the weights."""
+def weight_arrays(model, estimator, scaling, scaler_X=None, scaler_y=None):
+    """The arrays saved for a fitted estimator: scaler parameters and model weights."""
+    arrays = {}
+    if scaling != "unscaled":
+        for name, scaler in (("x", scaler_X), ("y", scaler_y)):
+            arrays[f"{name}_scale"] = scaler.scale_
+            arrays[f"{name}_shift"] = scaler.mean_ if scaling == "standard" else scaler.min_
+    if model == "ridge":
+        arrays["coef"], arrays["intercept"] = np.ravel(estimator.coef_), np.ravel(estimator.intercept_)
+    elif model == "kernel":
+        arrays["dual_coef"] = np.ravel(estimator.dual_coef_)
+    else:
+        for i, (w, b) in enumerate(zip(estimator.coefs_, estimator.intercepts_)):
+            arrays[f"W{i}"], arrays[f"b{i}"] = w, b
+    return arrays
+
+
+def save_weights_file(path, meta, arrays, test_index, estimator):
+    """Write one weight file; meta gets the environment and, for MLPs, n_iter and n_layers."""
+    meta = dict(meta, environment=environment())
+    if meta["model"] == "neural":
+        meta["n_iter"] = int(estimator.n_iter_)
+        meta["n_layers"] = len(estimator.coefs_)
+    np.savez_compressed(ensure_dir(path.parent) / path.name, meta=json.dumps(meta), test_index=test_index, **arrays)
+
+
+def train(descriptor, defect_type, target_variable, model, scaling, folds, params=None, name=None):
+    """Fit the cell on the given folds exactly as optim_*.py / ml.py do, and save the weights.
+
+    params, name: train another MLP configuration than the Table 3 one (e.g. those compared in the
+    Supplementary Material) and save it as weights/{name}_fold{f}.npz."""
     from sklearn.kernel_ridge import KernelRidge
     from sklearn.linear_model import Ridge
     from sklearn.neural_network import MLPRegressor
@@ -118,14 +153,14 @@ def train(descriptor, defect_type, target_variable, model, scaling, folds):
 
     features = FEATURES[descriptor]
     data, data_single = load_datasets(descriptor, defect_type)
-    params = hyperparameters(descriptor, defect_type, target_variable, model, scaling)
+    params = params or hyperparameters(descriptor, defect_type, target_variable, model, scaling)
 
     for fold in folds:
         train_index, test_index = split(data, fold)
         train_data, test_data = frames(data, data_single, train_index, test_index)
         train_X, train_y = train_data[features], train_data[[target_variable]]
         test_X, test_y = test_data[features], test_data[[target_variable]]
-        arrays = {"test_index": test_index}
+        scaler_X = scaler_y = None
 
         if scaling == "unscaled":
             train_X_scaled, train_y_scaled, test_X_scaled = train_X, train_data[target_variable], test_X
@@ -136,20 +171,14 @@ def train(descriptor, defect_type, target_variable, model, scaling, folds):
             train_X_scaled = pd.DataFrame(scaler_X.transform(train_X), columns=train_X.columns)
             train_y_scaled = pd.DataFrame(scaler_y.transform(train_y.values.reshape(-1, 1)), columns=train_y.columns)
             test_X_scaled = pd.DataFrame(scaler_X.transform(test_X), columns=test_X.columns)
-            for name, scaler in (("x", scaler_X), ("y", scaler_y)):
-                arrays[f"{name}_scale"] = scaler.scale_
-                arrays[f"{name}_shift"] = scaler.mean_ if scaling == "standard" else scaler.min_
 
         if model == "ridge":
             estimator = Ridge(alpha=params["alpha"]).fit(train_X_scaled, train_y_scaled)
-            arrays["coef"], arrays["intercept"] = np.ravel(estimator.coef_), np.ravel(estimator.intercept_)
         elif model == "kernel":
             estimator = KernelRidge(alpha=params["alpha"], gamma=params["gamma"], kernel="rbf").fit(train_X_scaled, train_y_scaled)
-            arrays["dual_coef"] = np.ravel(estimator.dual_coef_)
         else:
             estimator = MLPRegressor(**params).fit(train_X_scaled, train_y_scaled.to_numpy().ravel())
-            for i, (w, b) in enumerate(zip(estimator.coefs_, estimator.intercepts_)):
-                arrays[f"W{i}"], arrays[f"b{i}"] = w, b
+        arrays = weight_arrays(model, estimator, scaling, scaler_X, scaler_y)
 
         def unscale(y):
             return y if scaling == "unscaled" else scaler_y.inverse_transform(np.reshape(y, (-1, 1)))
@@ -158,12 +187,9 @@ def train(descriptor, defect_type, target_variable, model, scaling, folds):
                 "model": model, "scaling": scaling, "fold": fold, "hyperparameters": params,
                 "mae_train": mae(train_y, unscale(estimator.predict(train_X_scaled))),
                 "mae_test": mae(test_y, unscale(estimator.predict(test_X_scaled))),
-                "n_train": len(train_data), "n_test": len(test_data), "environment": environment()}
-        if model == "neural":
-            meta["n_iter"] = int(estimator.n_iter_)
-            meta["n_layers"] = len(estimator.coefs_)
-        path = weights_path(descriptor, defect_type, target_variable, model, scaling, fold)
-        np.savez_compressed(ensure_dir(path.parent) / path.name, meta=json.dumps(meta), **arrays)
+                "n_train": len(train_data), "n_test": len(test_data)}
+        path = weights_path(descriptor, defect_type, target_variable, model, scaling, fold, name)
+        save_weights_file(path, meta, arrays, test_index, estimator)
         print(f"{path.relative_to(RESULTS_DIR)}: test MAE {meta['mae_test']:.4f}, train MAE {meta['mae_train']:.4f}", flush=True)
 
 
@@ -303,6 +329,104 @@ def evaluate():
     print(f"{n_complete} complete cells, {n_missing} cells without (all) weight files")
 
 
+_extra_cache = {}
+
+
+def _extra_case(case):
+    """Datasets, CV folds and learning curves of one case folder (cached per process)."""
+    if case not in _extra_cache:
+        descriptor, defect_type, _ = case.relative_to(RESULTS_DIR).parts
+        data, data_single = load_datasets(descriptor, defect_type)
+        fold_indices = [test for _, test in KFold(n_splits=N_SPLITS, shuffle=True, random_state=CV_RANDOM_STATE).split(data)]
+        curves = toml.load(case / "results.toml") if (case / "results.toml").exists() else {}
+        _extra_cache[case] = data, data_single, fold_indices, curves
+    return _extra_cache[case]
+
+
+def _check_extra_file(path):
+    """Recompute the MAEs of one non-Table-3 weight file; returns (path, meta, test MAE, train MAE,
+    difference to results.toml or None) or raises ValueError on a mismatch."""
+    case = path.parent.parent if path.parent.name == "curves" else path.parent
+    case = case.parent
+    descriptor, defect_type, target_variable = case.relative_to(RESULTS_DIR).parts
+    features = FEATURES[descriptor]
+    data, data_single, fold_indices, curves = _extra_case(case)
+    with np.load(path) as stored:
+        weights = dict(stored)
+    meta = json.loads(str(weights.pop("meta")))
+    if "train_folds" in meta:   # learning-curve fit
+        train_ids = meta["train_folds"]
+        train_index = np.concatenate([fold_indices[i] for i in train_ids])
+        test_index = np.concatenate([fold_indices[i] for i in range(N_SPLITS) if i not in train_ids])
+    else:
+        train_index, test_index = split(data, meta["fold"])
+    if not np.array_equal(test_index, weights["test_index"]):
+        raise ValueError(f"{path}: stored test indices differ from the split of data/")
+    train_data, test_data = frames(data, data_single, train_index, test_index)
+    X_train = train_data[features].to_numpy()
+    test_mae = mae(test_data[target_variable], predict(weights, meta, test_data[features].to_numpy(), X_train))
+    train_mae = mae(train_data[target_variable], predict(weights, meta, X_train, X_train))
+    if abs(test_mae - meta["mae_test"]) > 1e-6 or abs(train_mae - meta["mae_train"]) > 1e-6:
+        raise ValueError(f"{path}: MAE from the weights differs from the MAE recorded at training time")
+    worst = None
+    if "train_folds" in meta:
+        model = {"ridge": "linear"}.get(meta["model"], meta["model"])
+        d, f = meta["train_data_percentage"], meta["fold"]
+        worst = 0.0
+        for kind, value in (("test", test_mae), ("train", train_mae)):
+            stored = curves.get(f"MAE_percent_list_{model}_{kind}_{d}0", [])
+            if len(stored) < f or abs(stored[f - 1] - value) > 1e-6:
+                raise ValueError(f"{path}: {kind} MAE {value:.6f} differs from results.toml")
+            worst = max(worst, abs(stored[f - 1] - value))
+    return path, meta, test_mae, train_mae, worst
+
+
+def evaluate_extra(jobs=1):
+    """Check every other weight file (learning-curve fits from ml.py --save_weights, and named
+    configurations from train --name) against the MAEs recorded at training time and, for the
+    learning curves, against results.toml. Writes the named configurations' scores to cv_scores.toml.
+    With jobs > 1 the files of each case are checked in that many processes."""
+    from concurrent.futures import ProcessPoolExecutor
+    table_names = {f"{cell_name(m, s)}_fold{f}.npz" for m, ss in MODELS.items() for s in ss for f in range(1, N_SPLITS + 1)}
+    for folder in sorted(RESULTS_DIR.glob("*/*/*/weights")):
+        paths = sorted(p for p in folder.rglob("*.npz") if p.name not in table_names)
+        if not paths:
+            continue
+        case = folder.parent
+        try:
+            if jobs > 1:
+                with ProcessPoolExecutor(jobs) as pool:
+                    results = list(pool.map(_check_extra_file, paths, chunksize=4))
+            else:
+                results = [_check_extra_file(path) for path in paths]
+        except ValueError as error:
+            sys.exit(str(error))
+        named, worst = {}, 0.0
+        for path, meta, test_mae, train_mae, diff in results:
+            if diff is not None:
+                worst = max(worst, diff)
+            else:
+                name = path.stem.rsplit("_fold", 1)[0]
+                entry = named.setdefault(name, {"test": [None] * N_SPLITS, "train": [None] * N_SPLITS,
+                                                "hyperparameters": meta["hyperparameters"],
+                                                "environment": meta["environment"]})
+                entry["test"][meta["fold"] - 1], entry["train"][meta["fold"] - 1] = test_mae, train_mae
+        n_curves = sum("curves" in p.parts for p in paths)
+        if n_curves:
+            print(f"{case.relative_to(RESULTS_DIR)}: {n_curves} learning-curve fits match results.toml (max diff {worst:.1e})", flush=True)
+        for name, entry in named.items():
+            if None in entry["test"]:
+                print(f"{case.relative_to(RESULTS_DIR)}/{name}: incomplete ({entry['test'].count(None)} folds missing)")
+                continue
+            entry["mean_test"], entry["mean_train"] = float(np.mean(entry["test"])), float(np.mean(entry["train"]))
+            path = case / "cv_scores.toml"
+            existing = toml.load(path) if path.exists() else {}
+            existing[name] = entry
+            with open(path, "w", encoding="utf-8") as file:
+                toml.dump(existing, file)
+            print(f"{case.relative_to(RESULTS_DIR)}/{name}: mean test MAE {entry['mean_test']:.4f}", flush=True)
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = parser.add_subparsers(dest="command", required=True)
@@ -313,11 +437,20 @@ if __name__ == "__main__":
     p.add_argument("--model", choices=list(MODELS), required=True)
     p.add_argument("--scaling", choices=["unscaled", "standard", "normal"], default="standard")
     p.add_argument("--fold", type=int, nargs="*", default=list(range(1, N_SPLITS + 1)))
+    p.add_argument("--neural_params", type=json.loads, help="JSON dict of MLPRegressor parameters (default: Table 3)")
+    p.add_argument("--name", help="file name prefix for --neural_params models: weights/{name}_fold{f}.npz")
     sub.add_parser("evaluate")
+    p = sub.add_parser("evaluate-extra")
+    p.add_argument("--jobs", type=int, default=1, help="number of processes (default 1)")
     args = parser.parse_args()
     if args.command == "train":
         if args.scaling not in MODELS[args.model]:
             sys.exit(f"Table 3 has no {args.model} model with {args.scaling} scaling")
-        train(args.descriptor, args.defect_type, args.target_variable, args.model, args.scaling, args.fold)
-    else:
+        if (args.neural_params is None) != (args.name is None) or (args.name and args.model != "neural"):
+            sys.exit("--neural_params and --name go together, with --model neural")
+        train(args.descriptor, args.defect_type, args.target_variable, args.model, args.scaling, args.fold,
+              args.neural_params, args.name)
+    elif args.command == "evaluate":
         evaluate()
+    else:
+        evaluate_extra(args.jobs)
