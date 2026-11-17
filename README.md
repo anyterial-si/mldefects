@@ -203,8 +203,7 @@ scripts are needed.
    python neural_heatmaps.py
    ```
 
-To write results somewhere other than `results/`, set `MLDEFECTS_RESULTS_DIR` (the smoke test
-does this).
+To write results somewhere other than `results/`, set `MLDEFECTS_RESULTS_DIR`.
 
 ## The best models
 
@@ -238,13 +237,15 @@ thread settings used for training. `load_model` predicts with NumPy only; for th
 models it rebuilds the training inputs from `data/`. With these
 files, `python plot.py --from-weights` also recomputes the Fig. 4 predictions from the weights.
 
-## Smoke test
+## Test run
+
+We provide a quick test script:
 
 ```
-python python/machine_learning/smoke_test.py          # about 5 min with 8 cores
+python python/machine_learning/test_run.py          # about 5 min with 8 cores
 ```
 
-The smoke test does the following:
+The test run does the following:
 
 * checks Table 2 against `data/`;
 * reruns the 60 ridge cells and the 30 VS kernel ridge cells of Table 3 at their published
@@ -260,6 +261,7 @@ The MLP cells are not retrained (see below).
 
 * **Ridge and kernel ridge** reproduce to floating-point precision (≤ 1e-6 eV), both the full
   optimization grids and the learning curves.
+
 * **MLP results are sensitive to the numerical environment.** With effectively unlimited
   `max_iter`, the L-BFGS fits run for tens of thousands of iterations, and the large Adam
   networks for thousands of epochs. Different SciPy/NumPy versions, BLAS kernels or thread
@@ -271,6 +273,7 @@ The MLP cells are not retrained (see below).
   Changing only the MLP `random_state` (0–4) moves the VS FE mean between 0.463 and 0.542 eV, so
   the environment effect is within the run-to-run spread. The qualitative conclusions are
   unchanged.
+
 * **Exact MLP reproduction.** In the recorded environment (`requirements.txt`, Python 3.12,
   pip wheels, `OMP_NUM_THREADS=OPENBLAS_NUM_THREADS=1`), retraining gives bit-identical weights
   on the machine the weights were made on (Intel Broadwell) and, with
@@ -280,6 +283,7 @@ The MLP cells are not retrained (see below).
   ```
   also on an AVX-512 machine (Intel Xeon Gold 6130); without these settings the latter gives
   different fits. If you cannot reproduce a fit, contact the authors to obtain our weights files.
+
 * **`optim_results_neural.db`** has no fold column for the published runs. Some configurations
   have more than 10 rows (repeated runs) and some MAE rows have no matching hyperparameter row.
   Runs aggregated with the current `aggregate_results.py` record the fold.

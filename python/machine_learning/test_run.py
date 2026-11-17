@@ -1,7 +1,7 @@
-"""Smoke test: regenerate paper Tables 2 and 3 and compare them with the published values.
+"""Test run: regenerate paper Tables 2 and 3 and compare them with the published values.
 
-    python smoke_test.py            # ~5 min with 8 cores
-    python smoke_test.py --full     # also re-runs the 30 interstitial kernel ridge cells
+    python test_run.py            # ~5 min with 8 cores
+    python test_run.py --full     # also re-runs the 30 interstitial kernel ridge cells
                                     # (each ~10-30 CPU-min and ~6 GB RAM)
 
 What it does (the repository's results/ folder is never modified):
@@ -141,7 +141,7 @@ def main():
     checker = Checker()
     check_table_2(checker)
 
-    tmp = Path(tempfile.mkdtemp(prefix="mldefects_smoke_"))
+    tmp = Path(tempfile.mkdtemp(prefix="mldefects_test_"))
     tmp_results = tmp / "results"
     shutil.copytree(RESULTS_DIR, tmp_results, ignore=shutil.ignore_patterns("*_partial_results", "weights", "figures", "jobs", "tables"))
     env = dict(os.environ, MLDEFECTS_RESULTS_DIR=str(tmp_results), OMP_NUM_THREADS="1",
@@ -226,7 +226,7 @@ def main():
     else:
         shutil.rmtree(tmp)
     status = "PASSED" if checker.failures == 0 else f"FAILED ({checker.failures} failures)"
-    print(f"Smoke test {status} in {time.time() - start:.0f} s")
+    print(f"Test run {status} in {time.time() - start:.0f} s")
     sys.exit(1 if checker.failures else 0)
 
 
